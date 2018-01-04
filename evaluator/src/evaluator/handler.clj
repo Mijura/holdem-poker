@@ -7,17 +7,6 @@
                 [compojure.route :as route]
                 [clojure.math.combinatorics :as combo]))
 
-(def hand-strength {:high-card 0 
-                    :pair 1 
-                    :two-pairs 2 
-                    :three-of-a-kind 3 
-                    :straight 4 
-                    :flush 5 
-                    :full-house 6 
-                    :poker 7 
-                    :straight-flush 8 
-                    :royal-flush 9})
-
 (def card-strength {:2 1 
                     :3 2 
                     :4 3 
