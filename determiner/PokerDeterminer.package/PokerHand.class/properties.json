@@ -1,0 +1,16 @@
+{
+	"commentStamp" : "",
+	"super" : "Object",
+	"category" : "PokerDeterminer",
+	"classinstvars" : [ ],
+	"pools" : [ ],
+	"classvars" : [ ],
+	"instvars" : [
+		"cards",
+		"type",
+		"value",
+		"strength"
+	],
+	"name" : "PokerHand",
+	"type" : "normal"
+}
