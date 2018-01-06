@@ -111,20 +111,20 @@
   (def hist-value (calc-val hist))
   (cond
     (= hist-value 16) {:type "poker" :value (poker-value hist)} 
-    (= hist-value 10) {:type "full-house" :value (full-house-value hist)}
-    (= hist-value 9) {:type "three-of-a-kind" :value (three-of-a-kind-value hist)}
-    (= hist-value 7) {:type "two-pairs" :value (two-pairs-value hist)} 
+    (= hist-value 10) {:type "full_house" :value (full-house-value hist)}
+    (= hist-value 9) {:type "three_of_a_kind" :value (three-of-a-kind-value hist)}
+    (= hist-value 7) {:type "two_pairs" :value (two-pairs-value hist)} 
     (= hist-value 6) {:type "pair" :value (pair-value hist)}
     (= hist-value 5) 
       (cond (and (is-highest-straight numerics)
                   (apply = suits)) 
-                      {:type "royal-flush" :value (different-cards-value hist)}
+                      {:type "royal_flush" :value (different-cards-value hist)}
             (and (is-straight numerics)
                   (apply = suits)) 
-                      {:type "straight-flush" :value (different-cards-value hist)}
+                      {:type "straight_flush" :value (different-cards-value hist)}
             (and (is-lowest-straight numerics)
                   (apply = suits)) 
-                      {:type "straight-flush" :value (different-cards-value hist)}
+                      {:type "straight_flush" :value (different-cards-value hist)}
             (apply = suits) 
                       {:type "flush" :value (different-cards-value hist)}
             (is-straight numerics) 
@@ -132,11 +132,11 @@
             (is-lowest-straight numerics) 
                       {:type "straight" :value (different-cards-value hist)}
             :else 
-                      {:type "high-card" :value (different-cards-value hist)})))
+                      {:type "high_card" :value (different-cards-value hist)})))
 
 (defn create-response [hand result]
-  (hash-map :hand hand, 
-            :hand-type (get result :type), 
+  (hash-map :cards hand, 
+            :type (get result :type), 
             :value (get result :value)))
 
 (defn recognize-hand [cards]
