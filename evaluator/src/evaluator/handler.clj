@@ -7,17 +7,6 @@
                 [compojure.route :as route]
                 [clojure.math.combinatorics :as combo]))
 
-(def hand-strength {:high-card 0 
-                    :pair 1 
-                    :two-pairs 2 
-                    :three-of-a-kind 3 
-                    :straight 4 
-                    :flush 5 
-                    :full-house 6 
-                    :poker 7 
-                    :straight-flush 8 
-                    :royal-flush 9})
-
 (def card-strength {:2 1 
                     :3 2 
                     :4 3 
@@ -44,8 +33,7 @@
 (defn get-last [str]
   (.substring (java.lang.String. str) (- (count str) 1)))
 
-(defn create-poker-histogram [hand]
-  (def numerics (for [card hand] (remove-last card)))
+(defn create-poker-histogram [numerics]
   (def hist (zipmap numerics (repeat 2r0)))
   (update-vals hist numerics shift-left-or))
 
@@ -55,52 +43,120 @@
 (defn lazy-contains? [col key]
   (not (nil? (some #{key} col))))
 
-(defn is-lowest-straight [numerics]
-  (and (lazy-contains? numerics 13)  
-       (lazy-contains? numerics 1) 
-       (lazy-contains? numerics 2)
-       (lazy-contains? numerics 3)
-       (lazy-contains? numerics 4)))
+(defn get-card-strength [card]
+  (get card-strength (keyword (remove-last card))))
 
-(defn create-result [hist-value, hand]
-  (def numerics (for [card hand] (get card-strength (keyword (remove-last card)))))
-  (def suits (for [card hand] (get-last card)))
-  (def value (reduce + numerics))
+(defn get-numerics [hand]
+  (map get-card-strength hand))
 
+(defn get-suits [hand]
+  (map get-last hand))
+
+(defn exp [x n]
+  (reduce * (repeat n x)))
+
+(defn is-straight [numerics]
+  (def sum (reduce + numerics))
   (def min_el (apply min numerics))
   (def max_el (apply max numerics))
   (def straight_value (+ (- (/ (* max_el (+ max_el 1)) 2) (/ (* min_el (+ min_el 1)) 2)) min_el))
+  (= sum straight_value))
 
-  (def hand-type (cond
-    (= hist-value 16) "poker"
-    (= hist-value 10) "full-house"
-    (= hist-value 9) "three-of-a-kind"
-    (= hist-value 7) "two-pairs"
-    (= hist-value 6) "pair"
+(defn is-lowest-straight [numerics]
+  (and (lazy-contains? numerics 13)(lazy-contains? numerics 1)(lazy-contains? numerics 2)
+       (lazy-contains? numerics 3)(lazy-contains? numerics 4)))
+
+(defn is-highest-straight [numerics]
+  (and (is-straight numerics)(= (reduce + numerics) 55)))
+
+(defn find-key [value, hist]
+  (filter (comp #{value} hist) (keys hist)))
+
+(defn poker-value [hist]
+  (+  (* (nth (find-key 15 hist) 0) 13) 
+      (nth (find-key 1 hist) 0)))
+
+(defn full-house-value [hist]
+  (+  (* (nth (find-key 7 hist) 0) 13)
+      (nth (find-key 3 hist) 0)))
+
+(defn three-of-a-kind-value [hist]
+  (def kickers (find-key 1 hist))
+  (+  (* (nth (find-key 7 hist) 0) (exp 13 2))
+      (* (apply max kickers) 13) 
+      (apply min kickers)))
+
+(defn two-pairs-value [hist]
+  (def pairs (find-key 3 hist))
+  (+  (* (apply max pairs) (exp 13 2))
+      (* (apply min pairs) 13)
+      (nth (find-key 1 hist) 0)))
+
+(defn pair-value [hist]
+  (def kickers (sort (find-key 1 hist)))
+  (+  (* (nth (find-key 3 hist) 0) (exp 13 3)) 
+      (* (nth kickers 2) (exp 13 2)) 
+      (* (nth kickers 1) 13)
+      (nth kickers 0)))
+
+(defn different-cards-value [hist]
+  (def kickers (sort (find-key 1 hist)))
+  (+  (* (nth kickers 4) (exp 13 4)) 
+      (* (nth kickers 3) (exp 13 3)) 
+      (* (nth kickers 2) (exp 13 2))
+      (* (nth kickers 1) 13)
+      (nth kickers 0)))
+
+(defn create-type-and-value [hist, numerics, suits]
+  (def hist-value (calc-val hist))
+  (cond
+    (= hist-value 16) {:type "poker" :value (poker-value hist)} 
+    (= hist-value 10) {:type "full_house" :value (full-house-value hist)}
+    (= hist-value 9) {:type "three_of_a_kind" :value (three-of-a-kind-value hist)}
+    (= hist-value 7) {:type "two_pairs" :value (two-pairs-value hist)} 
+    (= hist-value 6) {:type "pair" :value (pair-value hist)}
     (= hist-value 5) 
-      (cond (and (= straight_value value) (= value 55) (apply = suits)) "royal-flush"
-            (and (= straight_value value) (apply = suits)) "straight-flush"
-            (and (is-lowest-straight numerics) (apply = suits)) "straight-flush"
-            (apply = suits) "flush"
-            (= straight_value value) "straight"
-            (is-lowest-straight numerics) "straight"
-            :else "high-card")))
+      (cond (and (is-highest-straight numerics)
+                  (apply = suits)) 
+                      {:type "royal_flush" :value (different-cards-value hist)}
+            (and (is-straight numerics)
+                  (apply = suits)) 
+                      {:type "straight_flush" :value (different-cards-value hist)}
+            (and (is-lowest-straight numerics)
+                  (apply = suits)) 
+                      {:type "straight_flush" :value (different-cards-value hist)}
+            (apply = suits) 
+                      {:type "flush" :value (different-cards-value hist)}
+            (is-straight numerics) 
+                      {:type "straight" :value (different-cards-value hist)}
+            (is-lowest-straight numerics) 
+                      {:type "straight" :value (different-cards-value hist)}
+            :else 
+                      {:type "high_card" :value (different-cards-value hist)})))
 
-  (def value 
-    (cond (is-lowest-straight numerics) (- value 13)
-          :else value))
-  (hash-map :hand hand, :value value, :hand-type hand-type))
+(defn create-response [hand result]
+  (hash-map :cards hand, 
+            :type (get result :type), 
+            :value (get result :value)))
 
 (defn recognize-hand [cards]
-  (doseq [hand (combo/combinations cards 5)]
-    (println (create-result (calc-val (create-poker-histogram hand)) hand))
-    )(println "------------------------"))
+  ;creates all combinations with 5 cards
+  (def hands (combo/combinations cards 5))
+
+  ;splits card to numeric and suit
+  (def numerics (map get-numerics hands))
+  (def suits (map get-suits hands))
+
+  (def poker-histogram (map create-poker-histogram numerics))
+  
+  (def result (map create-type-and-value poker-histogram numerics suits))
+  (map create-response hands result))
 
 (defroutes app-routes
-  (POST "/recognize" {body :body} (recognize-hand body))
+  (POST "/recognize" {body :body} (response (recognize-hand body)))
   (route/not-found "Not Found"))
 
 (def app
   (-> (handler/api app-routes)
-    (middleware/wrap-json-body)
-    (middleware/wrap-json-response)))
+      (middleware/wrap-json-body)
+      (middleware/wrap-json-response)))

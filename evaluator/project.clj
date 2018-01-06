@@ -4,7 +4,7 @@
       :dependencies [[org.clojure/clojure "1.7.0"]
                      [org.clojure/math.combinatorics "0.1.3"]
                      [compojure "1.1.1"]
-                     [ring/ring-json "0.1.2"]
+                     [ring/ring-json "0.4.0"]
                      [cheshire "4.0.3"]]
       :plugins [[lein-ring "0.7.3"]]
       :ring {:handler evaluator.handler/app}
