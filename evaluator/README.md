@@ -1,4 +1,4 @@
-# evaluator
+# Evaluator
 
 Response from this server will be use for hand comparation. When we compare two hands we first look at hand types. According to [poker rules](http://www.ontexasholdem.com/pokerhandrankings.html), the hand with stronger type wins pot. But when we have two hands with same type we need some value who show which hand is better.
 
