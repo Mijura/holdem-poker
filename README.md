@@ -21,7 +21,7 @@ After that server is started on port 3000.
 
 ### Determiner of best hand - server (Pharo)
 
-Implementation of this application part is stored in folder with name "evaluator". To start the server, take a few steps:
+Implementation of this application part is stored in folder with name "determiner". To start the server, take a few steps:
 
 1) get repository
 ```
