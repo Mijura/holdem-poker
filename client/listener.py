@@ -6,24 +6,28 @@ import socket
 import json
 import requests
 
-class Listener:
+class Traffic:
     
     def __init__(self, client):
     
         self.client = client
         self.HOST = socket.gethostbyname(socket.gethostname()) # get ip address
-        self.PORT = 0 #when we put zero soceket bind will get free port
+        self.PORT = 0 #when we put zero 'socket bind' will randomly take one of free ports
  
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #socket opening
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
         self.s.bind((self.HOST, self.PORT))
 
-        self.PORT = self.s.getsockname()[1] #get port
+        self.PORT = self.s.getsockname()[1] #setting obtained port
         print(self.PORT)
-        address = ''.join([self.HOST,':', str(self.PORT)])
-        r = requests.post("http://localhost:8080/addUser", data={'name': 'mio', 'address': address})
-        print(r.status_code, r.reason)
-        self.done = False
         
+        self.done = False
+    
+    def register_player(self):
+        address = ''.join([self.HOST,':', str(self.PORT)])
+        r = requests.post("http://localhost:8080/registerPlayer", data={'name': 'mio', 'address': address})
+        print(r.status_code, r.reason)
+
     def listen(self):
         self.s.listen(10)
         #wait for changes

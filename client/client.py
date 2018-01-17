@@ -6,19 +6,28 @@ class Client:
     
     def __init__(self):
         pygame.init()
+
+        #set window size, title and bacground image (table)
         self.display = pygame.display.set_mode((800,577))
         pygame.display.set_caption("Texas Hold`em Poker")
         self.bg = pygame.image.load("images/table.png")
         self.display.blit(self.bg, (0, 0))
         pygame.display.flip()
         
-        self.listener = Listener(self)
-        listen = Thread(target = self.listener.listen, args = ())
+        #instancing object for traffic
+        self.traffic = Traffic(self)
+
+        #registering player on server (sending name, address, port)
+        self.traffic.register_player()
+
+        #wait for changes from core server
+        #must be on thread because method for listening use infinity loop
+        listen = Thread(target = self.traffic.listen, args = ())
         listen.start()
 
         self.game_loop()
         listen.join()
-        
+ 
     def blit_alpha(self, target, source, location, opacity):
         x = location[0]
         y = location[1]
