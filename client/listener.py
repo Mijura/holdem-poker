@@ -4,6 +4,7 @@
  
 import socket
 import json
+import requests
 
 class Listener:
     
@@ -18,7 +19,9 @@ class Listener:
 
         self.PORT = self.s.getsockname()[1] #get port
         print(self.PORT)
-        
+        address = ''.join([self.HOST,':', str(self.PORT)])
+        r = requests.post("http://localhost:8080/addUser", data={'name': 'mio', 'address': address})
+        print(r.status_code, r.reason)
         self.done = False
         
     def listen(self):
@@ -30,9 +33,9 @@ class Listener:
             data = request.decode('UTF-8').split('\r\n\r\n')[1] #split request with new line (header is at position 0, data is at position 1)
             data = json.loads(data) # convert json string to json
             try:
-                self.client.refresh_table()
+                self.client.refresh_table(data)
             except:
-                print("client is gone...")
+                raise
             connection.close()
      
         self.s.close()

@@ -28,9 +28,23 @@ class Client:
         temp.set_alpha(opacity)        
         target.blit(temp, location)
     
-    def refresh_table(self):
-        c0 = pygame.image.load("images/cards/JH.png")
-        self.display.blit(c0, (370, 200))
+    def take_seat(func):
+        def callf(self, news):
+            if(news['message']=='take seat'):
+                self.display.blit(pygame.image.load("images/purple_right.png"), (5, 105))
+            return func(self, news)
+        return callf
+
+    def move(func):
+        def callf(self, news):
+            if(news['message']=='move'):
+                self.display.blit(pygame.image.load("images/purple_right.png"), (5, 105))
+            return func(self, news)
+        return callf
+
+    @move
+    @take_seat
+    def refresh_table(self, news):
         pygame.display.flip()
         
     def game_loop(self):
