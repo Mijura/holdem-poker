@@ -1,5 +1,5 @@
 '''
-    Simple socket server using threads
+    Class for communication with remote server (core)
 '''
  
 import socket
@@ -21,12 +21,18 @@ class Traffic:
         self.PORT = self.s.getsockname()[1] #setting obtained port
         print(self.PORT)
         
+        self.remote_server = "http://localhost:8080"
         self.done = False
     
     def register_player(self):
         address = ''.join([self.HOST,':', str(self.PORT)])
-        r = requests.post("http://localhost:8080/registerPlayer", data={'name': 'mio', 'address': address})
-        print(r.status_code, r.reason)
+        r = requests.post(self.remote_server + "/registerPlayer", 
+                            data={'name': 'mio', 'address': address})
+
+    def get_players(self):
+        r = requests.get(self.remote_server + "/inGame")
+        data = json.loads(r.text)
+        self.client.draw_players(data)
 
     def listen(self):
         self.s.listen(10)

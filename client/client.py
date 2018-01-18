@@ -2,6 +2,9 @@ import pygame
 from threading import Thread
 from listener import *
 
+def square(x):
+    return x**2
+
 class Client:
     
     def __init__(self):
@@ -19,6 +22,9 @@ class Client:
 
         #registering player on server (sending name, address, port)
         self.traffic.register_player()
+
+        #get players in the game
+        self.traffic.get_players()
 
         #wait for changes from core server
         #must be on thread because method for listening use infinity loop
@@ -51,17 +57,26 @@ class Client:
             return func(self, news)
         return callf
 
+    def convert_players_to_news(self, player):
+        player['message'] = 'take seat'
+        return player
+
     @move
     @take_seat
     def refresh_table(self, news):
         pygame.display.flip()
+
+    def draw_players(self, players):
+        news = map(self.convert_players_to_news, list(players.values()))
+        for n in list(news):
+            self.refresh_table(n)
         
     def game_loop(self):
         gameExit = False
         while not gameExit:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.listener.done = True
+                    self.traffic.done = True
                     gameExit = True
 
         pygame.quit()
