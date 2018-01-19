@@ -10,6 +10,9 @@ class Client:
     def __init__(self, name):
         pygame.init()
 
+        #FONT = pygame.font.Font(None, 32)
+        self.myfont = pygame.font.Font("myriad_pro.ttf", 15)
+
         self.name = name
         
         #set window size, title and bacground image (table)
@@ -59,12 +62,31 @@ class Client:
             if(news['message']=='take seat'):
                 seat = news['seat']
                 previous = pygame.image.load("images/take.png")
+
+                x, y = self.player_coord[seat]
+
+                name_label = self.myfont.render(news['name'], True, pygame.Color('white'))
+                l_size = name_label.get_rect().size
+
+                chips_label = self.myfont.render(str(news['chips'])+' $', True, pygame.Color('white'))
+                c_size = chips_label.get_rect().size
+
                 if(int(seat)>=4):
                     side = 'left'
+                    l_x = x + 100 - l_size[0]/2
+                    c_x = x + 100 - c_size[0]/2    
                 else:
                     side = 'right'
+                    l_x = x + 50 - l_size[0]/2
+                    c_x = x + 50 - c_size[0]/2
+
                 self.display.blit(self.bg, self.empty_coord[seat], pygame.Rect(self.empty_coord[seat], previous.get_rect().size))
-                self.display.blit(pygame.image.load("images/purple_"+side+".png"), self.player_coord[seat])
+                self.display.blit(pygame.image.load("images/purple_"+side+".png"), (x, y))
+                
+                l_y = y + 15
+                c_y = y + 37
+                self.display.blit(name_label, (l_x, l_y))
+                self.display.blit(chips_label, (c_x, c_y))
             return func(self, news)
         return callf
 
