@@ -7,9 +7,11 @@ import socket
 
 class Client:
     
-    def __init__(self):
+    def __init__(self, name):
         pygame.init()
 
+        self.name = name
+        
         #set window size, title and bacground image (table)
         self.display = pygame.display.set_mode((800,577))
         pygame.display.set_caption("Texas Hold`em Poker")
@@ -27,7 +29,7 @@ class Client:
         self.sender = Sender(self)
 
         #registering player on server
-        self.sender.register_player(self.address, "mio")
+        self.sender.register_player(self.address, self.name)
 
         #get players in the game
         self.sender.get_players()
@@ -126,6 +128,3 @@ class Client:
 
         pygame.quit()
         quit()
-        
-if __name__ == "__main__":
-    c = Client()
