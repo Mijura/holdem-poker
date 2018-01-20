@@ -52,7 +52,8 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         
         data = self.data.decode('UTF-8').split('\r\n\r\n')[1] #split request with new line (header is at position 0, data is at position 1)
         data = json.loads(data)
-        self.client.refresh_table(data)
+        for x in data:
+            self.client.refresh_table(x)
 
         # just send back the same data, but upper-cased
         response = b'HTTP/1.1 200 OK\n\n'

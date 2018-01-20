@@ -25,7 +25,8 @@ class Client:
         
         self.player_coord = {'1': (5, 345), '2': (5, 105), '3': (325, 30), '4': (645, 105), '5': (645, 345), '6': (325, 420)}
         self.empty_coord = {'1': (55, 390), '2': (55, 105), '3': (355, 45), '4': (645, 105), '5': (645, 390), '6': (355, 450)}
-
+        self.cards_coord = {'1': (5, 320), '2': (5, 80), '3': (325, 5), '4': (675, 80), '5': (675, 320), '6': (355, 395)}
+        
         self.HOST, self.PORT = self.get_address()
         self.address = ''.join([self.HOST,':', str(self.PORT)])
         
@@ -58,7 +59,7 @@ class Client:
     
     def draw_player(func):
         def callf(self, news):
-            if(news['message']=='take seat'):
+            if('draw player' in news):
                 seat = news['seat']
                 previous = pygame.image.load("images/take.png")
                 p_coords = self.empty_coord[seat]
@@ -85,8 +86,12 @@ class Client:
                     l_x = x + 50 - l_size[0]/2
                     c_x = x + 50 - c_size[0]/2
 
+                if('on move' in news):
+                    color = "green"
+                else:
+                    color = "purple"
                 
-                self.display.blit(pygame.image.load("images/purple_"+side+".png"), (x, y))
+                self.display.blit(pygame.image.load("images/"+color+"_"+side+".png"), (x, y))
                 
                 l_y = y + 15
                 c_y = y + 37
@@ -95,13 +100,8 @@ class Client:
             return func(self, news)
         return callf
 
-    def move(func):
-        def callf(self, news):
-            if(news['message']=='move'):
-                seat = news['seat']
-                self.display.blit(pygame.image.load("images/purple_right.png"), self.player_coord[seat])
-            return func(self, news)
-        return callf
+    def draw_image_part(self, image, coord, size):
+        self.display.blit(image, coord, pygame.Rect((0,0), size))
 
     # creates button and save button args if user click on button (left click)
     def create_button(self, image, coord, action, action_args):
@@ -120,9 +120,27 @@ class Client:
             self.blit_alpha(image, (x, y), 210)
 
     # adds button in dictionary
-    def take_seat(func):
+    def draw_players_cards(func):
         def callf(self, news):
-            if(news['message'] == 'take button'):
+            if('cards' in news):
+                seat = news['seat']
+                x, y = self.cards_coord[seat]
+
+                p = (60,60) #size of image part
+                if(news['address']==self.address):
+                    f, s = news['cards']
+                    self.draw_image_part(pygame.image.load("images/cards/"+f+".png"),(x, y), p)
+                    self.draw_image_part(pygame.image.load("images/cards/"+s+".png"),(x+60, y), p)
+                else:
+                    self.draw_image_part(pygame.image.load("images/cards/0.png"),(x, y), p)
+                    self.draw_image_part(pygame.image.load("images/cards/0.png"),(x+60, y), p)
+            return func(self, news)
+        return callf
+    
+    # adds button in dictionary
+    def draw_take_button(func):
+        def callf(self, news):
+            if('draw take button' in news):
                 seat = news['seat']
                 key = self.empty_coord[seat]
                 value = (pygame.image.load("images/take.png"), 
@@ -139,15 +157,14 @@ class Client:
     def init_table(self, seat):
         if(str(seat) in self.players):
             player = self.players[str(seat)]
-            player['message'] = 'take seat'
             result = player
         else:
-            result = {'message':'take button', 'seat': str(seat)}
+            result = {'draw take button':True, 'seat': str(seat)}
         return result
 
-    @move
+    @draw_players_cards
     @draw_player
-    @take_seat
+    @draw_take_button
     def refresh_table(self, news):
         pygame.display.flip()
 
