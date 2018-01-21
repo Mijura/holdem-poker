@@ -26,7 +26,8 @@ class Client:
         self.player_coord = {'1': (5, 345), '2': (5, 105), '3': (325, 30), '4': (645, 105), '5': (645, 345), '6': (325, 420)}
         self.empty_coord = {'1': (55, 390), '2': (55, 105), '3': (355, 45), '4': (645, 105), '5': (645, 390), '6': (355, 450)}
         self.cards_coord = {'1': (5, 320), '2': (5, 80), '3': (325, 5), '4': (675, 80), '5': (675, 320), '6': (355, 395)}
-        
+        self.buttons_coord = {'check': (410, 527), 'call': (410, 527), 'raise': (540, 527), 'bet': (540, 527), 'fold': (670, 527)}
+
         self.HOST, self.PORT = self.get_address()
         self.address = ''.join([self.HOST,':', str(self.PORT)])
         
@@ -57,6 +58,16 @@ class Client:
         temp.set_alpha(opacity)        
         self.display.blit(temp, location)
     
+    def remove_seat(func):
+        def callf(self, news):
+            if('draw player' in news):
+                seat = news['seat']
+                previous = pygame.image.load("images/take.png")
+                p_coords = self.empty_coord[seat]
+                self.display.blit(self.bg, p_coords, pygame.Rect(p_coords, previous.get_rect().size))
+            return func(self, news)
+        return callf
+
     def draw_player(func):
         def callf(self, news):
             if('draw player' in news):
@@ -67,8 +78,6 @@ class Client:
                 #delete button from dictionary and screen
                 if p_coords in self.buttons:
                     del self.buttons[p_coords]
-                    self.display.blit(self.bg, p_coords, pygame.Rect(p_coords, previous.get_rect().size))
-                    pygame.display.flip()
 
                 x, y = self.player_coord[seat]
 
@@ -151,6 +160,36 @@ class Client:
             return func(self, news)
         return callf
 
+    def draw_empty_seat(func):
+        def callf(self, news):
+            if('draw empty seat' in news):
+                seat = news['seat']
+                coords = self.empty_coord[seat]
+                self.display.blit(self.bg, coords, 
+                    pygame.Rect(coords, pygame.image.load("images/take.png").get_rect().size))
+                        
+                self.blit_alpha(pygame.image.load("images/empty.png"), coords, 128)
+            return func(self, news)
+        return callf
+
+    # adds bet buttons in dictionary
+    def draw_bet_buttons(func):
+        def callf(self, news):
+            if('on move' in news):
+                a = filter(lambda s: 'raise' in s, self.data)
+                
+                all_raises = list(filter(lambda s: 'raise' in s, self.data))
+                #my_raise = list(filter(lambda s: s['address']==self.address, all_raises))
+                #re = list(filter(lambda s: s['a']> m, all_raises))
+                all_bets = list(filter(lambda s: 'bet' in s, self.data))
+                if(all_bets or all_raises):
+                    pass
+                else:
+                    
+
+            return func(self, news)
+        return callf
+
     # creates news dependes seat's state
     # if seat is busy, returns player
     # If seat is not busy, returns message wich said that on this position it's need to be button
@@ -162,9 +201,19 @@ class Client:
             result = {'draw take button':True, 'seat': str(seat)}
         return result
 
+    def post_take(self, seat):
+        if(str(seat) in self.players):
+            result = {}
+        else:
+            result = {'draw empty seat':True, 'seat': str(seat)}
+        return result
+
+    @remove_seat
+    @draw_bet_buttons
     @draw_players_cards
     @draw_player
     @draw_take_button
+    @draw_empty_seat
     def refresh_table(self, news):
         pygame.display.flip()
 
@@ -172,6 +221,12 @@ class Client:
     def draw_seats(self, players):
         self.players = players
         news = map(self.init_table, range(1,7))
+        for n in list(news):
+            self.refresh_table(n)
+
+    def draw_empty_seats(self, players):
+        self.players = players
+        news = map(self.post_take, range(1,7))
         for n in list(news):
             self.refresh_table(n)
 
@@ -208,12 +263,18 @@ class Client:
                 # button_args != None - means that user was click mouse left button before
                 elif event.type == pygame.MOUSEBUTTONUP and self.button_args != None:
                     #delete button from dictionary and screen
+                    """
+                    for b in self.buttons.keys():
+                        self.display.blit(self.bg, b, 
+                            pygame.Rect(b, pygame.image.load("images/take.png").get_rect().size))                        
+                        pygame.display.flip()"""
+                    
+                    
                     if self.button_args[1] in self.buttons:
-                        del self.buttons[self.button_args[1]]
                         self.display.blit(self.bg, self.button_args[1], 
                             pygame.Rect(self.button_args[1], self.button_args[0].get_rect().size))
                         pygame.display.flip()
-
+                        self.buttons = {}
                     #executes saved method in new thread
                     t = Thread(target = self.button_args[2], args = self.button_args[3])
                     t.start()

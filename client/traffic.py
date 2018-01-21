@@ -24,9 +24,9 @@ class Sender():
     def take_seat(self, address, number):
         r = requests.post(self.remote_server + "/takeSeat", 
                             data={'seat': number, 'address': address})
-        result = json.loads(r.text)
-        if(not result):
-            print("seat is busy")
+        data = json.loads(r.text)
+        if(data):
+            self.client.draw_empty_seats(data)
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
     """
@@ -52,6 +52,8 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         
         data = self.data.decode('UTF-8').split('\r\n\r\n')[1] #split request with new line (header is at position 0, data is at position 1)
         data = json.loads(data)
+        self.client.data = data
+
         for x in data:
             self.client.refresh_table(x)
 
