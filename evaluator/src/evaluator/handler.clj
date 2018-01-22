@@ -135,8 +135,8 @@
                       {:type "high_card" :value (different-cards-value hist)})))
 
 (defn create-response [hand result]
-  (hash-map :cards hand, 
-            :type (get result :type), 
+  (hash-map :hand hand, 
+            :kind (get result :type), 
             :value (get result :value)))
 
 (defn recognize-hand [cards]

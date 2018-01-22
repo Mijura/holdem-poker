@@ -185,7 +185,7 @@ class Client:
                 if(all_bets or all_raises):
                     pass
                 else:
-                    
+                    pass
 
             return func(self, news)
         return callf
@@ -263,18 +263,13 @@ class Client:
                 # button_args != None - means that user was click mouse left button before
                 elif event.type == pygame.MOUSEBUTTONUP and self.button_args != None:
                     #delete button from dictionary and screen
-                    """
-                    for b in self.buttons.keys():
-                        self.display.blit(self.bg, b, 
-                            pygame.Rect(b, pygame.image.load("images/take.png").get_rect().size))                        
-                        pygame.display.flip()"""
-                    
                     
                     if self.button_args[1] in self.buttons:
                         self.display.blit(self.bg, self.button_args[1], 
                             pygame.Rect(self.button_args[1], self.button_args[0].get_rect().size))
                         pygame.display.flip()
                         self.buttons = {}
+
                     #executes saved method in new thread
                     t = Thread(target = self.button_args[2], args = self.button_args[3])
                     t.start()
