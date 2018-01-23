@@ -53,7 +53,7 @@ PCore new core.
 
 ### GUI - desktop app (Python)
 
-Implementation of this application part is stored in folder with name "client". If you To start GUI app, navigate to the folder "client" in terminal and execute command:
+Implementation of this application part is stored in folder with name "client". To start GUI app, navigate to the folder "client" in terminal and execute command:
 ```
 python app.py
 ```
