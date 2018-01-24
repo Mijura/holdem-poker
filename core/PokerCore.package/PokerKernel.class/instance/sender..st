@@ -1,0 +1,3 @@
+accesing
+sender: newSender
+	^newSender

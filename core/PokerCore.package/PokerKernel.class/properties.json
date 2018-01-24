@@ -1,0 +1,19 @@
+{
+	"commentStamp" : "",
+	"super" : "Object",
+	"category" : "PokerCore",
+	"classinstvars" : [ ],
+	"pools" : [ ],
+	"classvars" : [ ],
+	"instvars" : [
+		"gameState",
+		"deck",
+		"handFinished",
+		"waitingList",
+		"inGame",
+		"sender",
+		"players"
+	],
+	"name" : "PokerKernel",
+	"type" : "normal"
+}
