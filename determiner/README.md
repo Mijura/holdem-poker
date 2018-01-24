@@ -15,12 +15,12 @@ Example:
 ```
 [
   {
-    "user": "mio",
-    "hand": [ "JD", "10D", "QD", "KD", "AD", "3S", "2S" ]
+    "player": "mio",
+    "cards": [ "JD", "10D", "QD", "KD", "AD", "3S", "2S" ]
   },
   {
-    "user": "cone",
-    "hand": [ "JD", "10D", "QD", "KD", "7S", "3P", "2P" ]
+    "player": "cone",
+    "cards": [ "JD", "10D", "QD", "KD", "7S", "3P", "2P" ]
   }
 ]
 ```
@@ -29,24 +29,27 @@ Example:
 ```
 {
     "mio": {
-        "cards": [ "JD", "10D", "QD", "KD", "AD" ],
-        "type": "royal_flush"
+        "hand": [ "JD", "10D", "QD", "KD", "AD" ],
+        "kind": "royal_flush"
     }
 }
 ```
 
 ## Prerequisites
 
-You will need to install Tealight from Pharo's Catalog Browser.
+You will need to install [Stack](https://docs.haskellstack.org/en/stable/README/).
 
 ## Running
 
-To start a web server for the application, run command in Pharo Playground:
+To start server, execute commands:
 
-    Determiner new server.
+```
+stack build
+stac exec determiner
+```
 
 Note: Server calls another server (evaluator server). For properly use, you must also start it. Check folder "evaluator".
 
 ## License
 
-Copyright © 2017 
+Copyright © 2017 Miodrag Vilotijevic

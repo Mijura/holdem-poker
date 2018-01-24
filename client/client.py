@@ -175,7 +175,7 @@ class Client:
     # adds bet buttons in dictionary
     def draw_bet_buttons(func):
         def callf(self, news):
-            if('on move' in news):
+            if('on move' in news and news['address']==self.address):
                 a = filter(lambda s: 'raise' in s, self.data)
                 
                 all_raises = list(filter(lambda s: 'raise' in s, self.data))
