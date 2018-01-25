@@ -81,6 +81,11 @@ class Client:
 
                 x, y = self.player_coord[seat]
 
+                if('big blind' in news):
+                    news['chips'] -= news['big blind']
+                    image = "images/chips/"+str(news['big blind'])+".png"
+                    self.display.blit(pygame.image.load(image), (190, 150))
+
                 name_label = self.myfont.render(news['name'], True, pygame.Color('white'))
                 l_size = name_label.get_rect().size
                 chips_label = self.myfont.render(str(news['chips'])+' $', True, pygame.Color('white'))
@@ -185,7 +190,23 @@ class Client:
                 if(all_bets or all_raises):
                     pass
                 else:
-                    pass
+                    #add chceck button in dict
+                    key = self.buttons_coord['check']
+                    value = (pygame.image.load("images/check.png"), 
+                         key, self.sender.check, ())
+                    self.buttons[key] = value
+                
+                    #add bet button in dict
+                    key = self.buttons_coord['bet']
+                    value = (pygame.image.load("images/bet.png"), 
+                         key, self.sender.bet, ())
+                    self.buttons[key] = value
+
+                    #add fold button in dict
+                    key = self.buttons_coord['fold']
+                    value = (pygame.image.load("images/fold.png"), 
+                         key, self.sender.fold, ())
+                    self.buttons[key] = value
 
             return func(self, news)
         return callf
@@ -267,6 +288,12 @@ class Client:
                     if self.button_args[1] in self.buttons:
                         self.display.blit(self.bg, self.button_args[1], 
                             pygame.Rect(self.button_args[1], self.button_args[0].get_rect().size))
+
+                        #remove from screen all bets button
+                        for bc in self.buttons_coord.values():
+                            self.display.blit(self.bg, bc, 
+                            pygame.Rect(bc, pygame.image.load("images/bet.png").get_rect().size))
+                        
                         pygame.display.flip()
                         self.buttons = {}
 

@@ -79,7 +79,7 @@ instance Ord Res where
 send :: River -> IO Res
 send x = do
     manager <- newManager defaultManagerSettings
-    let request = setRequestBodyJSON (toJSON (cards x)) $ "POST http://localhost:3000/recognize"
+    let request = setRequestBodyJSON (toJSON (cards x)) $ "POST http://localhost:3002/recognize"
     response <- httpLbs request manager
     let hands = decode (responseBody response) :: Maybe [Hand]
     return (Res { user = (player x), h = (maximum (fromJust hands)) })  

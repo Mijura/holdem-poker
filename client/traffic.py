@@ -28,6 +28,15 @@ class Sender():
         if(data):
             self.client.draw_empty_seats(data)
 
+    def check(self):
+        pass
+    
+    def bet(self):
+        pass
+    
+    def fold(self):
+        pass
+
 class MyTCPHandler(socketserver.BaseRequestHandler):
     """
     The request handler class for our server.
