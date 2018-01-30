@@ -4,6 +4,7 @@ from traffic import *
 import socketserver
 from contextlib import closing
 import socket
+from itertools import takewhile
 
 class Client:
     
@@ -27,6 +28,7 @@ class Client:
         self.empty_coord = {'1': (55, 390), '2': (55, 105), '3': (355, 45), '4': (645, 105), '5': (645, 390), '6': (355, 450)}
         self.cards_coord = {'1': (5, 320), '2': (5, 80), '3': (325, 5), '4': (675, 80), '5': (675, 320), '6': (355, 395)}
         self.buttons_coord = {'check': (410, 527), 'call': (410, 527), 'raise': (540, 527), 'bet': (540, 527), 'fold': (670, 527)}
+        self.chips = [1, 5, 10, 25, 50, 100, 200, 500, 1000]
 
         self.HOST, self.PORT = self.get_address()
         self.address = ''.join([self.HOST,':', str(self.PORT)])
@@ -80,11 +82,6 @@ class Client:
                     del self.buttons[p_coords]
 
                 x, y = self.player_coord[seat]
-
-                if('big blind' in news):
-                    news['chips'] -= news['big blind']
-                    image = "images/chips/"+str(news['big blind'])+".png"
-                    self.display.blit(pygame.image.load(image), (190, 150))
 
                 name_label = self.myfont.render(news['name'], True, pygame.Color('white'))
                 l_size = name_label.get_rect().size
@@ -177,6 +174,28 @@ class Client:
             return func(self, news)
         return callf
 
+    def draw_chips(func):
+        def callf(self, news):
+            if('big blind' in news):
+                x = takewhile(lambda x: x<=news['big blind'], self.chips)
+                chips={}
+                bb = news['big blind']
+                
+                """x = list(x)
+                for c in x.reverse():
+                    i = 0
+                    bb-=c
+                    while (bb>=0):
+                        i+=1
+                        chips[c]=i
+                print(chips)"""
+                
+                news['chips'] -= news['big blind']
+                image = "images/chips/"+str(news['big blind'])+".png"
+                self.display.blit(pygame.image.load(image), (190, 150))
+            return func(self, news)
+        return callf
+
     # adds bet buttons in dictionary
     def draw_bet_buttons(func):
         def callf(self, news):
@@ -229,6 +248,7 @@ class Client:
             result = {'draw empty seat':True, 'seat': str(seat)}
         return result
 
+    @draw_chips
     @remove_seat
     @draw_bet_buttons
     @draw_players_cards
