@@ -8,6 +8,13 @@ takeSeat: seat address: address
 			
 			gameState doState: self.
 			
+			"send news to all users"
+			(players values) do: [:each | 
+				sender sendPreFlop: (players values) address: (each at: 'address')].
+			
+			(waitingList values) do: [:each | 
+				sender sendPreFlop: (players values) address: (each at: 'address')].
+	
 			result := inGame]										"operation is succesful"
  		ifTrue: [result := 0].							"if the seat isn't freely, operation is unsuccessful"
 	^result		

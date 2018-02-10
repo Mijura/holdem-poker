@@ -1,7 +1,7 @@
 initialize
 initialize
 	super.
-	gameState := PreFlopState new.
+	gameState := WaitState new.
 	deck := nil.
 	waitingList := Dictionary new.
 	inGame := Dictionary new.
