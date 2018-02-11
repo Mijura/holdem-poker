@@ -10,5 +10,8 @@ doState: kernel
 			
 			newState:= PreFlopState new.
 			kernel gameState: newState.
-			newState doState: kernel].
+			newState doState: kernel]
+		ifFalse:[
+			"send news to all users"
+			kernel sender sendPreFlopNews: kernel].
 		

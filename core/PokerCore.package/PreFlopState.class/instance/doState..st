@@ -1,21 +1,44 @@
 operations
 doState: kernel
 
-	| newState cards first|
+	| newState cards vals index|
 	
 	kernel players: kernel inGame.
 	(kernel handFinished)
 		ifFalse:[
 			kernel deck: Deck new.
 			
-			first := true.
-			(kernel players values) do: [:each | 
+			vals := kernel players values.
+			vals do: [:each | 
 				cards := (kernel deck get: 2) asSet. 			"two cards for each player"
-				each at: 'cards' put: cards.
-				(first)
-					ifTrue: [each at: 'on move' put: true.  each at: 'big blind' put: 50. ].
-				first:= false].
+				each at: 'cards' put: cards].
+			
+			"determination big blind, small blind and which player is on the move"
+			((kernel started) isNil)									"previous state was WaitState - there are only two players at table"
+				ifTrue: [kernel on_move: vals first.
+							kernel started: 1.
+							vals first at: 'on move' put: true.
+							vals first at: 'chips' put: ((vals first at: 'chips') - 25).
+							vals first at: 'stake' put: 25.
+							vals second at: 'stake' put: 50.
+							vals second at: 'chips' put: ((vals second at: 'chips') - 50).]
+				ifFalse:[
+							index := kernel started.
+							(index == vals size)
+								ifTrue:[kernel started: 1.]								"end of array - create cycle"
+								ifFalse:[kernel started: (index + 1).].				"next player is on move"
+							vals at: (kernel started) at: 'on move' put: true.
+							vals at: (index-1) at: 'chips' put: ((vals first at: 'chips') - 25).
+							vals at: (index-1) at: 'stake' put: 25.
+							vals at: index at: 'stake' put: 50.
+							vals at: index at: 'chips' put: ((vals second at: 'chips') - 50).
+							
+					].
+
+			newState:= BetState new.
+			kernel gameState: newState.
+			
+			"send news to all users"
+			kernel sender sendPreFlopNews: kernel].
 	
-			newState:= BetState new. 
-			kernel gameState: newState.].
 		

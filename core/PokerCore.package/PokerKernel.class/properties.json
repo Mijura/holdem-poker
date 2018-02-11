@@ -12,7 +12,9 @@
 		"waitingList",
 		"inGame",
 		"sender",
-		"players"
+		"players",
+		"on_move",
+		"started"
 	],
 	"name" : "PokerKernel",
 	"type" : "normal"

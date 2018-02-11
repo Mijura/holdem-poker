@@ -7,4 +7,6 @@ initialize
 	inGame := Dictionary new.
 	sender := HttpSender new.
 	players := Dictionary new.
+	on_move := nil.
+	started := nil.
 	handFinished := true.
