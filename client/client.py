@@ -5,6 +5,7 @@ import socketserver
 from contextlib import closing
 import socket
 from itertools import takewhile
+import functools
 
 class Client:
     
@@ -28,7 +29,9 @@ class Client:
         self.empty_coord = {'1': (55, 390), '2': (55, 105), '3': (355, 45), '4': (645, 105), '5': (645, 390), '6': (355, 450)}
         self.cards_coord = {'1': (5, 320), '2': (5, 80), '3': (325, 5), '4': (675, 80), '5': (675, 320), '6': (355, 395)}
         self.buttons_coord = {'check': (410, 527), 'call': (410, 527), 'raise': (540, 527), 'bet': (540, 527), 'fold': (670, 527)}
+        self.chips_coord = {'1': (190, 325), '2': (190, 150), '3': (400, 120), '4': (590, 150), '5': (590, 325), '6': (400, 360)}
         self.chips = [1, 5, 10, 25, 50, 100, 200, 500, 1000]
+        self.stake_keys = ['bet','raise','call','big blind', 'small blind']
 
         self.HOST, self.PORT = self.get_address()
         self.address = ''.join([self.HOST,':', str(self.PORT)])
@@ -138,7 +141,7 @@ class Client:
                 x, y = self.cards_coord[seat]
 
                 p = (60,60) #size of image part
-                if(news['address']==self.address):
+                if(news['address'] == self.address):
                     f, s = news['cards']
                     self.draw_image_part(pygame.image.load("images/cards/"+f+".png"),(x, y), p)
                     self.draw_image_part(pygame.image.load("images/cards/"+s+".png"),(x+60, y), p)
@@ -174,25 +177,49 @@ class Client:
             return func(self, news)
         return callf
 
+    def group_chips(self, chips_hist):
+        chips = [[],[],[],[]]
+        i = 0
+        for item in chips_hist.items():
+            if(i==4):
+                i = 0
+            chips[i].append(item)
+            i+=1
+        return chips
+
     def draw_chips(func):
         def callf(self, news):
-            if('big blind' in news):
-                x = takewhile(lambda x: x<=news['big blind'], self.chips)
-                chips={}
-                bb = news['big blind']
-                
-                """x = list(x)
-                for c in x.reverse():
+            if('stake' in news):
+                chips = takewhile(lambda x: x<=news['stake'], self.chips)
+                chips = list(chips)
+                chips_hist={}
+                stake = news['stake']
+                seat = news['seat']
+
+                for chip in reversed(chips):
                     i = 0
-                    bb-=c
-                    while (bb>=0):
+                    while ((stake-chip)>=0):
+                        stake-=chip
                         i+=1
-                        chips[c]=i
-                print(chips)"""
+                        chips_hist[chip]=i #histogram : key chip, value count
+                    if(stake<1):
+                        break
                 
-                news['chips'] -= news['big blind']
-                image = "images/chips/"+str(news['big blind'])+".png"
-                self.display.blit(pygame.image.load(image), (190, 150))
+                x, y = self.chips_coord[seat]
+                start_y = y
+                columns = self.group_chips(chips_hist)
+                for column in columns:
+                    for chips in column:
+                        for i in range(0,chips[1]):
+                            image = "images/chips/"+str(chips[0])+".png"
+                            self.display.blit(pygame.image.load(image), (x, y))
+                            y -= 5
+                    y = start_y
+                    if(int(seat)>=4):
+                        x -= 22
+                    else:
+                        x += 22
+
             return func(self, news)
         return callf
 
