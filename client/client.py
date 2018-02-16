@@ -7,6 +7,47 @@ import socket
 from itertools import takewhile
 import functools
 
+class Slider():
+    def __init__(self):
+        self.WHITE = (255, 255, 255)
+        self.TRANS = (1, 1, 1)
+
+        self.val = 0  # start value
+        self.maxi = 0  # maximum at slider position right
+        self.mini = 0  # minimum at slider position left
+        self.xpos = 670  # x-location on screen
+        self.ypos = 500 # y-location on screen
+
+        self.hit = False  # the hit attribute indicates slider movement due to mouse interaction
+
+        # button surface #
+        self.button_surf = pygame.surface.Surface((20, 20))
+        self.button_surf.fill(self.TRANS)
+        self.button_surf.set_colorkey(self.TRANS)
+        self.button_surf.blit(pygame.image.load("images/slider_button.png"),(0,0))
+
+    def draw(self, screen):
+        screen.blit(pygame.image.load("images/table.png"), (self.xpos, self.ypos), pygame.Rect((self.xpos, self.ypos),(120, 25)))
+        surf = pygame.surface.Surface((120, 25), pygame.SRCALPHA, 32)
+        surf.blit(pygame.image.load("images/slider_scale.png"),(0,8))
+
+        pos = (10+int((self.val-self.mini)/(self.maxi-self.mini)*100), 13)
+        self.button_rect = self.button_surf.get_rect(center=pos)
+        surf.blit(self.button_surf, self.button_rect)
+        self.button_rect.move_ip(self.xpos, self.ypos)  # move of button box to correct screen position
+
+        screen.blit(surf, (self.xpos, self.ypos))
+    
+    def move(self):
+        """
+        The dynamic part; reacts to movement of the slider button.
+        """
+        self.val = (pygame.mouse.get_pos()[0] - self.xpos - 10) / 100 * (self.maxi - self.mini) + self.mini
+        if self.val < self.mini:
+            self.val = self.mini
+        if self.val > self.maxi:
+            self.val = self.maxi
+
 class Client:
     
     def __init__(self, name):
@@ -23,6 +64,9 @@ class Client:
         pygame.display.set_caption("Texas Hold`em Poker")
         self.bg = pygame.image.load("images/table.png")
         self.display.blit(self.bg, (0, 0))
+        self.slider = Slider()
+        self.show_slider = False
+
         pygame.display.flip()
         
         self.player_coord = {'1': (5, 345), '2': (5, 105), '3': (325, 30), '4': (645, 105), '5': (645, 345), '6': (325, 420)}
@@ -254,6 +298,11 @@ class Client:
                          key, self.sender.fold, ())
                     self.buttons[key] = value
 
+                    self.slider.maxi = news['chips']
+                    self.slider.mini = 0
+                    self.slider.val = 0
+                    self.show_slider = True
+
             return func(self, news)
         return callf
 
@@ -327,6 +376,10 @@ class Client:
                 if event.type == pygame.QUIT:
                     gameExit = True
                 
+                elif event.type == pygame.MOUSEBUTTONDOWN and self.show_slider:
+                    pos = pygame.mouse.get_pos()
+                    if self.slider.button_rect.collidepoint(pos):
+                        self.slider.hit = True
                 # if the user releases the mouse button
                 # button_args != None - means that user was click mouse left button before
                 elif event.type == pygame.MOUSEBUTTONUP and self.button_args != None:
@@ -344,9 +397,26 @@ class Client:
                         pygame.display.flip()
                         self.buttons = {}
 
+                        #remove slider from screen
+                        self.show_slider = False
+                        self.display.blit(self.bg, 
+                            (self.slider.xpos, self.slider.ypos), 
+                                pygame.Rect((self.slider.xpos, self.slider.ypos),(120, 25)))
+
                     #executes saved method in new thread
                     t = Thread(target = self.button_args[2], args = self.button_args[3])
                     t.start()
                     self.button_args = None #resets button args
+
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    self.slider.hit = False
+            
+            if self.slider.hit:
+                self.slider.move()
+
+            if self.show_slider:
+                self.slider.draw(self.display)
+            pygame.display.flip()
+
         pygame.quit()
         quit()
