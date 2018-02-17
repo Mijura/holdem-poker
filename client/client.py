@@ -1,5 +1,5 @@
 import pygame
-from threading import Thread
+from threading import Thread, Lock
 from traffic import *
 import socketserver
 from contextlib import closing
@@ -15,8 +15,8 @@ class Slider():
         self.val = 0  # start value
         self.maxi = 0  # maximum at slider position right
         self.mini = 0  # minimum at slider position left
-        self.xpos = 670  # x-location on screen
-        self.ypos = 500 # y-location on screen
+        self.xpos = 540  # x-location on screen
+        self.ypos = 495 # y-location on screen
 
         self.hit = False  # the hit attribute indicates slider movement due to mouse interaction
 
@@ -162,7 +162,7 @@ class Client:
         self.display.blit(image, coord, pygame.Rect((0,0), size))
 
     # creates button and save button args if user click on button (left click)
-    def create_button(self, image, coord, action, action_args):
+    def create_button(self, image, coord, action, action_args, type):
 
         mouse = pygame.mouse.get_pos()
         click = pygame.mouse.get_pressed()
@@ -170,12 +170,18 @@ class Client:
         x, y = coord
         w,h = image.get_rect().size
         self.display.blit(self.bg, coord, pygame.Rect(coord, image.get_rect().size))
-        if x+w>mouse[0] > x and y+h>mouse[1]>y:
+        if x+w>mouse[0]>x and y+h>mouse[1]>y:
             self.display.blit(image, (x, y))
             if(click[0]==1):
-                self.button_args = (image, coord, action, action_args)
+                self.button_args = (image, coord, action, action_args, type)
         else:
             self.blit_alpha(image, (x, y), 210)
+        
+        if type=='raise' or type=='bet':
+            myfont = pygame.font.Font("myriad_pro.ttf", 15)
+            label = myfont.render(str(round(self.slider.val)), True, (255,255,255))
+            l_size = label.get_rect().size
+            self.display.blit(label, ((540 + 60 - l_size[0]/2), 547))
 
     # adds button in dictionary
     def draw_players_cards(func):
@@ -204,7 +210,7 @@ class Client:
                 value = (pygame.image.load("images/take.png"), 
                          self.empty_coord[seat], 
                          self.sender.take_seat, 
-                         (self.address, seat))
+                         (self.address, seat), 'seat')
                 self.buttons[key] = value
             return func(self, news)
         return callf
@@ -271,7 +277,6 @@ class Client:
     def draw_bet_buttons(func):
         def callf(self, news):
             if('on move' in news and news['address']==self.address):
-                a = filter(lambda s: 'raise' in s, self.data)
                 
                 all_raises = list(filter(lambda s: 'raise' in s, self.data))
                 #my_raise = list(filter(lambda s: s['address']==self.address, all_raises))
@@ -280,25 +285,43 @@ class Client:
                 if(all_bets or all_raises):
                     pass
                 else:
+                    lock = Lock()
+
                     #add chceck button in dict
                     key = self.buttons_coord['check']
                     value = (pygame.image.load("images/check.png"), 
-                         key, self.sender.check, ())
+                         key, self.sender.check, (), 'check')
+                    lock.acquire()
                     self.buttons[key] = value
+                    lock.release()
                 
                     #add bet button in dict
                     key = self.buttons_coord['bet']
                     value = (pygame.image.load("images/bet.png"), 
-                         key, self.sender.bet, ())
+                         key, self.sender.bet, (), 'bet')
+                    lock.acquire()
                     self.buttons[key] = value
+                    lock.release()
 
                     #add fold button in dict
                     key = self.buttons_coord['fold']
                     value = (pygame.image.load("images/fold.png"), 
-                         key, self.sender.fold, ())
+                         key, self.sender.fold, (), 'fold')
+                    lock.acquire()
                     self.buttons[key] = value
+                    lock.release()
 
-                    self.slider.maxi = news['chips']
+                    #slider
+                    maxi = 0
+                    for player in self.data: #search player who whas max chips
+                        if(player['address']!=self.address):
+                            if player['chips']>maxi:
+                                maxi = player['chips']
+
+                    if(maxi>news['chips']): #if current player has less chips
+                        maxi = news['chips']
+
+                    self.slider.maxi = maxi
                     self.slider.mini = 0
                     self.slider.val = 0
                     self.show_slider = True
@@ -365,7 +388,7 @@ class Client:
     #Update the display and show the button
     def show_the_buttons(self):
         for v in self.buttons.values():
-            self.create_button(v[0], v[1], v[2], v[3])
+            self.create_button(v[0], v[1], v[2], v[3], v[4])
         pygame.display.flip()
 
     def game_loop(self):
@@ -376,15 +399,21 @@ class Client:
                 if event.type == pygame.QUIT:
                     gameExit = True
                 
-                elif event.type == pygame.MOUSEBUTTONDOWN and self.show_slider:
+                elif event.type == pygame.MOUSEBUTTONDOWN:
                     pos = pygame.mouse.get_pos()
-                    if self.slider.button_rect.collidepoint(pos):
+                    if self.show_slider and self.slider.button_rect.collidepoint(pos):
                         self.slider.hit = True
+                    
+                    self.button_hit = False
+                    for v in self.buttons.values():
+                        button_rect = pygame.Rect(v[1], v[0].get_rect().size)
+                        if button_rect.collidepoint(pos):
+                            self.button_hit = True
+                    
                 # if the user releases the mouse button
                 # button_args != None - means that user was click mouse left button before
-                elif event.type == pygame.MOUSEBUTTONUP and self.button_args != None:
+                elif event.type == pygame.MOUSEBUTTONUP and self.button_hit:
                     #delete button from dictionary and screen
-                    
                     if self.button_args[1] in self.buttons:
                         self.display.blit(self.bg, self.button_args[1], 
                             pygame.Rect(self.button_args[1], self.button_args[0].get_rect().size))
@@ -406,6 +435,7 @@ class Client:
                     #executes saved method in new thread
                     t = Thread(target = self.button_args[2], args = self.button_args[3])
                     t.start()
+                    self.button_hit = False
                     self.button_args = None #resets button args
 
                 elif event.type == pygame.MOUSEBUTTONUP:
@@ -416,6 +446,7 @@ class Client:
 
             if self.show_slider:
                 self.slider.draw(self.display)
+                
             pygame.display.flip()
 
         pygame.quit()
