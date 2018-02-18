@@ -6,6 +6,7 @@ from contextlib import closing
 import socket
 from itertools import takewhile
 import functools
+import copy
 
 class Slider():
     def __init__(self):
@@ -57,6 +58,7 @@ class Client:
         self.name = name
         
         self.buttons = {}
+        self.thread_lock = Lock()
         self.button_args = None
 
         #set window size, title and bacground image (table)
@@ -73,7 +75,7 @@ class Client:
         self.empty_coord = {'1': (55, 390), '2': (55, 105), '3': (355, 45), '4': (645, 105), '5': (645, 390), '6': (355, 450)}
         self.cards_coord = {'1': (5, 320), '2': (5, 80), '3': (325, 5), '4': (675, 80), '5': (675, 320), '6': (355, 395)}
         self.buttons_coord = {'check': (410, 527), 'call': (410, 527), 'raise': (540, 527), 'bet': (540, 527), 'fold': (670, 527)}
-        self.chips_coord = {'1': (190, 325), '2': (190, 150), '3': (400, 120), '4': (590, 150), '5': (590, 325), '6': (400, 360)}
+        self.chips_coord = {'1': (190, 325), '2': (190, 150), '3': (400, 110), '4': (590, 150), '5': (590, 325), '6': (400, 370)}
         self.chips = [1, 5, 10, 25, 50, 100, 200, 500, 1000]
         self.stake_keys = ['bet','raise','call','big blind', 'small blind']
 
@@ -91,11 +93,10 @@ class Client:
 
         #wait for changes from core server
         #must be on thread because method for listening use infinity loop
-        listen = Thread(target = self.listen, args = ())
-        listen.start()
+        self.listen_thread = Thread(target = self.listen, args = ())
+        self.listen_thread.start()
 
         self.game_loop()
-        listen.join()
 
     #draws image with opacity
     def blit_alpha(self, source, location, opacity):
@@ -126,7 +127,9 @@ class Client:
 
                 #delete button from dictionary and screen
                 if p_coords in self.buttons:
+                    self.thread_lock.acquire()
                     del self.buttons[p_coords]
+                    self.thread_lock.release()
 
                 x, y = self.player_coord[seat]
 
@@ -163,7 +166,6 @@ class Client:
 
     # creates button and save button args if user click on button (left click)
     def create_button(self, image, coord, action, action_args, type):
-
         mouse = pygame.mouse.get_pos()
         click = pygame.mouse.get_pressed()
     
@@ -211,7 +213,9 @@ class Client:
                          self.empty_coord[seat], 
                          self.sender.take_seat, 
                          (self.address, seat), 'seat')
+                self.thread_lock.acquire()
                 self.buttons[key] = value
+                self.thread_lock.release()
             return func(self, news)
         return callf
 
@@ -285,31 +289,30 @@ class Client:
                 if(all_bets or all_raises):
                     pass
                 else:
-                    lock = Lock()
 
                     #add chceck button in dict
                     key = self.buttons_coord['check']
                     value = (pygame.image.load("images/check.png"), 
                          key, self.sender.check, (), 'check')
-                    lock.acquire()
+                    self.thread_lock.acquire()
                     self.buttons[key] = value
-                    lock.release()
-                
+                    self.thread_lock.release()
+
                     #add bet button in dict
                     key = self.buttons_coord['bet']
                     value = (pygame.image.load("images/bet.png"), 
                          key, self.sender.bet, (), 'bet')
-                    lock.acquire()
+                    self.thread_lock.acquire()
                     self.buttons[key] = value
-                    lock.release()
+                    self.thread_lock.release()
 
                     #add fold button in dict
                     key = self.buttons_coord['fold']
                     value = (pygame.image.load("images/fold.png"), 
                          key, self.sender.fold, (), 'fold')
-                    lock.acquire()
+                    self.thread_lock.acquire()
                     self.buttons[key] = value
-                    lock.release()
+                    self.thread_lock.release()
 
                     #slider
                     maxi = 0
@@ -380,10 +383,10 @@ class Client:
 
     def listen(self):
         # Create the server, binding to localhost and port
-        with socketserver.TCPServer((self.HOST, self.PORT), MyTCPHandler(self)) as server:
+        with socketserver.TCPServer((self.HOST, self.PORT), MyTCPHandler(self)) as self.server:
             # Activate the server; this will keep running until you
             # interrupt the program with Ctrl-C
-            server.serve_forever()
+            self.server.serve_forever()
     
     #Update the display and show the button
     def show_the_buttons(self):
@@ -397,6 +400,8 @@ class Client:
             self.show_the_buttons() #each time, draws all buttons from dictionary
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
+                    self.server.shutdown()
+                    self.server.server_close()
                     gameExit = True
                 
                 elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -424,7 +429,9 @@ class Client:
                             pygame.Rect(bc, pygame.image.load("images/bet.png").get_rect().size))
                         
                         pygame.display.flip()
+                        self.thread_lock.acquire()
                         self.buttons = {}
+                        self.thread_lock.release()
 
                         #remove slider from screen
                         self.show_slider = False
@@ -440,7 +447,7 @@ class Client:
 
                 elif event.type == pygame.MOUSEBUTTONUP:
                     self.slider.hit = False
-            
+
             if self.slider.hit:
                 self.slider.move()
 
