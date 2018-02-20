@@ -5,8 +5,9 @@ import socketserver
 from contextlib import closing
 import socket
 from itertools import takewhile
+from widgets import *
 import functools
-import copy
+import abc
 
 class Slider():
     def __init__(self):
@@ -57,8 +58,9 @@ class Client:
         self.myfont = pygame.font.Font("myriad_pro.ttf", 15)
         self.name = name
         
-        self.buttons = {}
+        self.buttons = []
         self.thread_lock = Lock()
+        self.last_clicked_button = None
         self.button_args = None
 
         #set window size, title and bacground image (table)
@@ -126,10 +128,12 @@ class Client:
                 p_coords = self.empty_coord[seat]
 
                 #delete button from dictionary and screen
+                """
+                self.thread_lock.acquire()
                 if p_coords in self.buttons:
-                    self.thread_lock.acquire()
                     del self.buttons[p_coords]
-                    self.thread_lock.release()
+                self.thread_lock.release()
+                """
 
                 x, y = self.player_coord[seat]
 
@@ -214,7 +218,7 @@ class Client:
                          self.sender.take_seat, 
                          (self.address, seat), 'seat')
                 self.thread_lock.acquire()
-                self.buttons[key] = value
+                self.buttons.append(TakeSeatButton(self.empty_coord[seat], seat, self))
                 self.thread_lock.release()
             return func(self, news)
         return callf
@@ -282,60 +286,81 @@ class Client:
         def callf(self, news):
             if('on move' in news and news['address']==self.address):
                 
-                all_raises = list(filter(lambda s: 'raise' in s, self.data))
-                #my_raise = list(filter(lambda s: s['address']==self.address, all_raises))
-                #re = list(filter(lambda s: s['a']> m, all_raises))
-                all_bets = list(filter(lambda s: 'bet' in s, self.data))
-                if(all_bets or all_raises):
-                    pass
-                else:
+                #add bet button in dict
+                key = self.buttons_coord['bet']
+                value = (pygame.image.load("images/bet.png"), key, self.sender.bet, (), 'bet')
+                self.thread_lock.acquire()
+                self.buttons[key] = value
+                self.thread_lock.release()
 
-                    #add chceck button in dict
-                    key = self.buttons_coord['check']
-                    value = (pygame.image.load("images/check.png"), 
-                         key, self.sender.check, (), 'check')
-                    self.thread_lock.acquire()
-                    self.buttons[key] = value
-                    self.thread_lock.release()
+                #add fold button in dict
+                key = self.buttons_coord['fold']
+                value = (pygame.image.load("images/fold.png"), key, self.sender.fold, (), 'fold')
+                self.thread_lock.acquire()
+                self.buttons[key] = value
+                self.thread_lock.release()
 
-                    #add bet button in dict
-                    key = self.buttons_coord['bet']
-                    value = (pygame.image.load("images/bet.png"), 
-                         key, self.sender.bet, (), 'bet')
-                    self.thread_lock.acquire()
-                    self.buttons[key] = value
-                    self.thread_lock.release()
+                #slider
+                maxi = 0
+                for player in self.data: #search player who whas max chips
+                    if(player['address']!=self.address):
+                        if player['chips']>maxi:
+                            maxi = player['chips']
 
-                    #add fold button in dict
-                    key = self.buttons_coord['fold']
-                    value = (pygame.image.load("images/fold.png"), 
-                         key, self.sender.fold, (), 'fold')
-                    self.thread_lock.acquire()
-                    self.buttons[key] = value
-                    self.thread_lock.release()
+                if(maxi>news['chips']): #if current player has less chips
+                    maxi = news['chips']
 
-                    #slider
-                    maxi = 0
-                    for player in self.data: #search player who whas max chips
-                        if(player['address']!=self.address):
-                            if player['chips']>maxi:
-                                maxi = player['chips']
-
-                    if(maxi>news['chips']): #if current player has less chips
-                        maxi = news['chips']
-
-                    self.slider.maxi = maxi
-                    self.slider.mini = 0
-                    self.slider.val = 0
-                    self.show_slider = True
+                self.slider.maxi = maxi
+                self.slider.mini = 0
+                self.slider.val = 0
+                self.show_slider = True
 
             return func(self, news)
         return callf
 
-    # creates news dependes seat's state
+    # returns player's stake
+    def get_stake(self, player):
+        return player['stake']
+
+    # returns True if all elements of list are equal, otherwise returns False
+    def check_equal(self, lst):
+        return lst[1:] == lst[:-1]
+
+    # adds check button in dictionary
+    def draw_call_button(func):
+        def callf(self, news):
+            if('on move' in news and news['address']==self.address):
+                stakes = list(map(self.get_stake, self.data))
+                if self.check_equal(stakes):
+                    #add chceck button in dict
+                    key = self.buttons_coord['check']
+                    value = (pygame.image.load("images/check.png"), 
+                        key, self.sender.check, (), 'check')
+                    self.thread_lock.acquire()
+                    self.buttons[key] = value
+                    self.thread_lock.release()
+            return func(self, news)
+        return callf
+    
+    # adds check button in dictionary
+    def draw_check_button(func):
+        def callf(self, news):
+            if('on move' in news and news['address']==self.address):
+                stakes = list(map(self.get_stake, self.data))
+                if self.check_equal(stakes):
+                    #add chceck button in dict
+                    key = self.buttons_coord['check']
+                    value = (pygame.image.load("images/check.png"), 
+                        key, self.sender.check, (), 'check')
+                    self.thread_lock.acquire()
+                    self.buttons[key] = value
+                    self.thread_lock.release()
+            return func(self, news)
+        return callf
+
     # if seat is busy, returns player
-    # If seat is not busy, returns message wich said that on this position it's need to be button
-    def init_table(self, seat):
+    # if seat is not busy, returns message wich said that on this position it's need to be "take button"
+    def player_or_take(self, seat):
         if(str(seat) in self.players):
             player = self.players[str(seat)]
             result = player
@@ -350,20 +375,21 @@ class Client:
             result = {'draw empty seat':True, 'seat': str(seat)}
         return result
 
-    @draw_chips
-    @remove_seat
-    @draw_bet_buttons
-    @draw_players_cards
+    #@draw_chips
+    #@remove_seat
+    #@draw_bet_buttons
+    #@draw_call_button
+    #@draw_check_button
+    #@draw_players_cards
     @draw_player
     @draw_take_button
     @draw_empty_seat
     def refresh_table(self, news):
         pygame.display.flip()
 
-    # create news from list of players and calls method for drawing news
-    def draw_seats(self, players):
+    def init_table(self, players):
         self.players = players
-        news = map(self.init_table, range(1,7))
+        news = map(self.player_or_take, range(1,7))
         for n in list(news):
             self.refresh_table(n)
 
@@ -390,8 +416,10 @@ class Client:
     
     #Update the display and show the button
     def show_the_buttons(self):
-        for v in self.buttons.values():
-            self.create_button(v[0], v[1], v[2], v[3], v[4])
+        self.thread_lock.acquire()
+        for button in self.buttons:
+            button.draw()
+        self.thread_lock.release()
         pygame.display.flip()
 
     def game_loop(self):
@@ -409,41 +437,19 @@ class Client:
                     if self.show_slider and self.slider.button_rect.collidepoint(pos):
                         self.slider.hit = True
                     
-                    self.button_hit = False
-                    for v in self.buttons.values():
-                        button_rect = pygame.Rect(v[1], v[0].get_rect().size)
-                        if button_rect.collidepoint(pos):
-                            self.button_hit = True
-                    
-                # if the user releases the mouse button
-                # button_args != None - means that user was click mouse left button before
-                elif event.type == pygame.MOUSEBUTTONUP and self.button_hit:
-                    #delete button from dictionary and screen
-                    if self.button_args[1] in self.buttons:
-                        self.display.blit(self.bg, self.button_args[1], 
-                            pygame.Rect(self.button_args[1], self.button_args[0].get_rect().size))
+                # if the user click on some button
+                elif event.type == pygame.MOUSEBUTTONUP and self.last_clicked_button:
 
-                        #remove from screen all bets button
-                        for bc in self.buttons_coord.values():
-                            self.display.blit(self.bg, bc, 
-                            pygame.Rect(bc, pygame.image.load("images/bet.png").get_rect().size))
-                        
-                        pygame.display.flip()
-                        self.thread_lock.acquire()
-                        self.buttons = {}
-                        self.thread_lock.release()
-
-                        #remove slider from screen
-                        self.show_slider = False
-                        self.display.blit(self.bg, 
-                            (self.slider.xpos, self.slider.ypos), 
-                                pygame.Rect((self.slider.xpos, self.slider.ypos),(120, 25)))
-
-                    #executes saved method in new thread
-                    t = Thread(target = self.button_args[2], args = self.button_args[3])
+                    t = Thread(target = self.last_clicked_button.mouse_click, args = {})
                     t.start()
-                    self.button_hit = False
-                    self.button_args = None #resets button args
+                    
+                    #erase all buttons from screen
+                    for button in self.buttons:
+                        button.erase()
+                    pygame.display.flip()
+
+                    self.last_clicked_button = None
+                    self.buttons = []
 
                 elif event.type == pygame.MOUSEBUTTONUP:
                     self.slider.hit = False

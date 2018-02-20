@@ -8,18 +8,17 @@ import requests
 class Sender():
     
     def __init__(self, client):
-    
         self.client = client
         self.remote_server = "http://localhost:8080"
     
     def register_player(self, address, name):
-        r = requests.post(self.remote_server + "/registerPlayer", 
+        requests.post(self.remote_server + "/registerPlayer", 
                             data={'name': name, 'address': address})
 
     def get_players(self):
         r = requests.get(self.remote_server + "/inGame")
         data = json.loads(r.text)
-        self.client.draw_seats(data)
+        self.client.init_table(data)
 
     def take_seat(self, address, number):
         r = requests.post(self.remote_server + "/takeSeat", 
