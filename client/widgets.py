@@ -111,7 +111,7 @@ class Slider(Widget):
 
 class Player(Widget):
 
-    def __init__(self, position, seat_number, name, chips, on_move, bet, client):
+    def __init__(self, position, seat_number, name, chips, on_move, bet, cards, address, client):
         self.position = position
         self.seat_number = seat_number
         self.name = name
@@ -119,8 +119,16 @@ class Player(Widget):
         self.on_move = on_move
         self.bet = bet
         self.parent = client
+        self.address = address
+        
+        self.cards = []
+        x, y = client.cards_coord[seat_number]
+        for card in cards:
+            self.cards.append(PlayerCard((x, y), card, address, client))
+            x += 60
 
     def draw(self):
+
         x, y = self.position
 
         name_label = self.parent.myfont.render(self.name, True, pygame.Color('white'))
@@ -131,7 +139,7 @@ class Player(Widget):
         if(self.seat_number >= 4):
             side = 'left'
             l_x = x + 100 - l_size[0]/2
-            c_x = x + 100 - c_size[0]/2    
+            c_x = x + 100 - c_size[0]/2
         else:
             side = 'right'
             l_x = x + 50 - l_size[0]/2
@@ -143,7 +151,13 @@ class Player(Widget):
             color = "purple"
         
         self.image = pygame.image.load("images/"+color+"_"+side+".png")
+
         self.erase()
+
+        for card in self.cards:
+            card.erase()
+            card.draw()
+
         self.parent.display.blit(self.image, self.position)
                 
         l_y = y + 15
@@ -165,6 +179,53 @@ class EmptySeat(Widget):
     def draw(self):
         self.erase()
         blit_alpha(self.parent.display, self.image, self.position, 128)
+                
+    def erase(self):
+        self.parent.display.blit(self.parent.bg, self.position, pygame.Rect(self.position, self.image.get_rect().size))
+
+class Chips(Widget):
+
+    def __init__(self, position, total, client):
+        self.position = position
+        self.total = total
+        self.parent = client
+
+    def draw(self):
+        pass
+                
+    def erase(self):
+        pass
+    
+class Chip(Widget):
+
+    def __init__(self, position, total, client):
+        self.position = position
+        self.total = total
+        self.parent = client
+
+    def draw(self):
+        pass
+                
+    def erase(self):
+        pass
+    
+class PlayerCard(Widget):
+
+    def __init__(self, position, card, address, client):
+        self.position = position
+        self.card = card
+        self.parent = client
+        
+        if client.address == address:
+            self.image = pygame.image.load("images/cards/"+card+".png")
+        else:
+            self.image = pygame.image.load("images/cards/0.png")
+
+    def draw_image_part(self, image, coord, size):
+        self.parent.display.blit(image, coord, pygame.Rect((0,0), size))
+
+    def draw(self):
+        self.draw_image_part(self.image, self.position, (60,60))
                 
     def erase(self):
         self.parent.display.blit(self.parent.bg, self.position, pygame.Rect(self.position, self.image.get_rect().size))

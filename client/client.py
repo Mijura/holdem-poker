@@ -60,16 +60,6 @@ class Client:
 
         self.game_loop()
     
-    def remove_seat(func):
-        def callf(self, news):
-            if('draw player' in news):
-                seat = news['seat']
-                previous = pygame.image.load("images/take.png")
-                p_coords = self.empty_coord[seat]
-                self.display.blit(self.bg, p_coords, pygame.Rect(p_coords, previous.get_rect().size))
-            return func(self, news)
-        return callf
-    
     def draw_image_part(self, image, coord, size):
         self.display.blit(image, coord, pygame.Rect((0,0), size))
 
@@ -243,8 +233,10 @@ class Client:
             if('set player' in news):
                 seat = int(news['seat'])
                 self.thread_lock.acquire()
+                if seat in self.table:
+                    self.table[seat].erase()
                 self.table[seat] = Player(self.player_coord[seat], seat, news['name'], news['chips'], 
-                        news['on move'], news['bet'], self)
+                        news['on move'], news['bet'], news['cards'], news['address'], self)
                 self.thread_lock.release()
             return func(self, news)
         return callf
@@ -254,6 +246,8 @@ class Client:
             if('set empty seat' in news):
                 seat = int(news['seat'])
                 self.thread_lock.acquire()
+                if seat in self.table:
+                    self.table[seat].erase()
                 self.table[seat] = EmptySeat(self.empty_coord[seat], seat, self)
                 self.thread_lock.release()
             return func(self, news)
@@ -264,6 +258,8 @@ class Client:
             if('set take button' in news):
                 seat = int(news['seat'])
                 self.thread_lock.acquire()
+                if seat in self.table:
+                    self.table[seat].erase()
                 self.table[seat] = TakeSeatButton(self.empty_coord[seat], seat, self)
                 self.thread_lock.release()
             return func(self, news)
@@ -282,7 +278,6 @@ class Client:
 
     def init_table(self, players):
         self.players = players
-        print(players)
         seats = map(self.player_or_take, range(1,7))
         for seat in seats:
             self.refresh_table(seat)
