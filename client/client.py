@@ -59,9 +59,6 @@ class Client:
         self.listen_thread.start()
 
         self.game_loop()
-    
-    def draw_image_part(self, image, coord, size):
-        self.display.blit(image, coord, pygame.Rect((0,0), size))
 
     # creates button and save button args if user click on button (left click)
     def create_button(self, image, coord, action, action_args, type):
@@ -70,70 +67,6 @@ class Client:
             label = myfont.render(str(round(self.slider.val)), True, (255,255,255))
             l_size = label.get_rect().size
             self.display.blit(label, ((540 + 60 - l_size[0]/2), 547))
-
-    # adds button in dictionary
-    def draw_players_cards(func):
-        def callf(self, news):
-            if('cards' in news):
-                seat = news['seat']
-                x, y = self.cards_coord[seat]
-
-                p = (60,60) #size of image part
-                if(news['address'] == self.address):
-                    f, s = news['cards']
-                    self.draw_image_part(pygame.image.load("images/cards/"+f+".png"),(x, y), p)
-                    self.draw_image_part(pygame.image.load("images/cards/"+s+".png"),(x+60, y), p)
-                else:
-                    self.draw_image_part(pygame.image.load("images/cards/0.png"),(x, y), p)
-                    self.draw_image_part(pygame.image.load("images/cards/0.png"),(x+60, y), p)
-            return func(self, news)
-        return callf
-
-    def group_chips(self, chips_hist):
-        chips = [[],[],[],[]]
-        i = 0
-        for item in chips_hist.items():
-            if(i==4):
-                i = 0
-            chips[i].append(item)
-            i+=1
-        return chips
-
-    def draw_chips(func):
-        def callf(self, news):
-            if('stake' in news):
-                chips = takewhile(lambda x: x<=news['stake'], self.chips)
-                chips = list(chips)
-                chips_hist={}
-                stake = news['stake']
-                seat = news['seat']
-
-                for chip in reversed(chips):
-                    i = 0
-                    while ((stake-chip)>=0):
-                        stake-=chip
-                        i+=1
-                        chips_hist[chip]=i #histogram : key chip, value count
-                    if(stake<1):
-                        break
-                
-                x, y = self.chips_coord[seat]
-                start_y = y
-                columns = self.group_chips(chips_hist)
-                for column in columns:
-                    for chips in column:
-                        for i in range(0,chips[1]):
-                            image = "images/chips/"+str(chips[0])+".png"
-                            self.display.blit(pygame.image.load(image), (x, y))
-                            y -= 5
-                    y = start_y
-                    if(int(seat)>=4):
-                        x -= 22
-                    else:
-                        x += 22
-
-            return func(self, news)
-        return callf
 
     # adds bet buttons in dictionary
     def draw_bet_buttons(func):
@@ -265,11 +198,9 @@ class Client:
             return func(self, news)
         return callf
 
-    #@draw_chips
     #@draw_bet_buttons
     #@draw_call_button
     #@draw_check_button
-    #@draw_players_cards
     @set_player
     @set_take_button
     @set_empty_seat

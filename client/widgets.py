@@ -1,5 +1,6 @@
 import abc
 import pygame
+from itertools import takewhile
 
 class Widget(metaclass=abc.ABCMeta):
 
@@ -117,7 +118,6 @@ class Player(Widget):
         self.name = name
         self.chips = chips
         self.on_move = on_move
-        self.bet = bet
         self.parent = client
         self.address = address
         
@@ -127,45 +127,52 @@ class Player(Widget):
             self.cards.append(PlayerCard((x, y), card, address, client))
             x += 60
 
-    def draw(self):
-
         x, y = self.position
 
-        name_label = self.parent.myfont.render(self.name, True, pygame.Color('white'))
-        l_size = name_label.get_rect().size
-        chips_label = self.parent.myfont.render(str(self.chips)+' $', True, pygame.Color('white'))
-        c_size = chips_label.get_rect().size
+        self.name_label = self.parent.myfont.render(self.name, True, pygame.Color('white'))
+        l_size = self.name_label.get_rect().size
+        self.chips_label = self.parent.myfont.render(str(self.chips)+' $', True, pygame.Color('white'))
+        c_size = self.chips_label.get_rect().size
 
         if(self.seat_number >= 4):
             side = 'left'
-            l_x = x + 100 - l_size[0]/2
-            c_x = x + 100 - c_size[0]/2
+            self.l_x = x + 100 - l_size[0]/2
+            self.c_x = x + 100 - c_size[0]/2
         else:
             side = 'right'
-            l_x = x + 50 - l_size[0]/2
-            c_x = x + 50 - c_size[0]/2
+            self.l_x = x + 50 - l_size[0]/2
+            self.c_x = x + 50 - c_size[0]/2
 
         if(self.on_move):
             color = "green"
         else:
             color = "purple"
-        
+
+        self.l_y = y + 15
+        self.c_y = y + 37
+
         self.image = pygame.image.load("images/"+color+"_"+side+".png")
+
+        self.bet = Chips(client.chips_coord[seat_number], bet, seat_number, client)
+
+    def draw(self):
 
         self.erase()
 
         for card in self.cards:
-            card.erase()
             card.draw()
 
         self.parent.display.blit(self.image, self.position)
-                
-        l_y = y + 15
-        c_y = y + 37
-        self.parent.display.blit(name_label, (l_x, l_y))
-        self.parent.display.blit(chips_label, (c_x, c_y))
+        self.parent.display.blit(self.name_label, (self.l_x, self.l_y))
+        self.parent.display.blit(self.chips_label, (self.c_x, self.c_y))
+        
+        self.bet.draw()
     
     def erase(self):
+        for card in self.cards:
+            card.erase()
+        
+        self.bet.erase()
         self.parent.display.blit(self.parent.bg, self.position, pygame.Rect(self.position, self.image.get_rect().size))
 
 class EmptySeat(Widget):
@@ -185,29 +192,76 @@ class EmptySeat(Widget):
 
 class Chips(Widget):
 
-    def __init__(self, position, total, client):
+    def __init__(self, position, total, seat_number, client):
         self.position = position
-        self.total = total
         self.parent = client
+        self.total = total
+        
+        self.chips_histogram = self.create_chips_histogram(total)
+        columns = self.group_chips()
+        
+        self.chips = []
+
+        x, y = self.position
+        start_y = y
+        for column in columns:
+            for chips in column:
+                for i in range(0,chips[1]):
+                    self.chips.append(Chip(chips[0], (x, y), client))
+                    y -= 5
+            y = start_y
+            if(int(seat_number)>=4):
+                x -= 22
+            else:
+                x += 22
+        
+    def create_chips_histogram(self, total):
+        chips = takewhile(lambda x: x<=total, self.parent.chips)
+        chips = list(chips)
+        chips_hist={}
+
+        for chip in reversed(chips):
+            i = 0
+            while ((total-chip)>=0):
+                total-=chip
+                i+=1
+                chips_hist[chip]=i #histogram : key chip, value count
+            if(total<1):
+                break
+        
+        return chips_hist
+    
+    def group_chips(self):
+        chips = [[],[],[],[]]
+        i = 0
+        for item in self.chips_histogram.items():
+            if(i==4):
+                i = 0
+            chips[i].append(item)
+            i+=1
+        return chips
 
     def draw(self):
-        pass
+        for chip in self.chips:
+            chip.draw()
                 
     def erase(self):
-        pass
-    
+        for chip in self.chips:
+            chip.erase()
+
 class Chip(Widget):
 
-    def __init__(self, position, total, client):
+    def __init__(self, count, position, client):
+        self.count = count
         self.position = position
-        self.total = total
         self.parent = client
+        self.image = pygame.image.load("images/chips/"+str(count)+".png")
 
     def draw(self):
-        pass
+        self.parent.display.blit(self.image, self.position)
                 
     def erase(self):
-        pass
+        self.parent.display.blit(self.parent.bg, self.position, pygame.Rect(self.position, self.image.get_rect().size))
     
 class PlayerCard(Widget):
 
