@@ -44,6 +44,7 @@ class TakeSeatButton(Button):
         self.seat_number = seat_number
         self.image = pygame.image.load("images/take.png")
         self.parent = client
+        self.kind = 'seat button'
 
     def draw(self):
         mouse = pygame.mouse.get_pos()
@@ -65,6 +66,106 @@ class TakeSeatButton(Button):
 
     def mouse_click(self):
         self.parent.sender.take_seat(self.parent.address, self.seat_number)
+
+class CheckButton(Button):
+
+    def __init__(self, position, client):
+        self.position = position
+        self.image = pygame.image.load("images/check.png")
+        self.parent = client
+        self.kind = 'bet button'
+
+    def draw(self):
+        mouse = pygame.mouse.get_pos()
+        click = pygame.mouse.get_pressed()
+        
+        x, y = self.position
+        w, h = self.image.get_rect().size
+
+        self.erase()
+        if x+w>mouse[0]>x and y+h>mouse[1]>y:
+            self.parent.display.blit(self.image, self.position)
+            if(click[0]==1):
+                self.parent.last_clicked_button = self
+        else:
+            blit_alpha(self.parent.display, self.image, self.position, 210)
+                
+    def erase(self):
+        self.parent.display.blit(self.parent.bg, self.position, pygame.Rect(self.position, self.image.get_rect().size))
+
+    def mouse_click(self):
+        self.parent.sender.check()
+
+class FoldButton(Button):
+
+    def __init__(self, position, client):
+        self.position = position
+        self.image = pygame.image.load("images/fold.png")
+        self.parent = client
+        self.kind = 'bet button'
+
+    def draw(self):
+        mouse = pygame.mouse.get_pos()
+        click = pygame.mouse.get_pressed()
+        
+        x, y = self.position
+        w, h = self.image.get_rect().size
+
+        self.erase()
+        if x+w>mouse[0]>x and y+h>mouse[1]>y:
+            self.parent.display.blit(self.image, self.position)
+            if(click[0]==1):
+                self.parent.last_clicked_button = self
+        else:
+            blit_alpha(self.parent.display, self.image, self.position, 210)
+                
+    def erase(self):
+        self.parent.display.blit(self.parent.bg, self.position, pygame.Rect(self.position, self.image.get_rect().size))
+
+    def mouse_click(self):
+        self.parent.sender.fold()
+
+class CallButton(Button):
+
+    def __init__(self, position, call_value, client):
+        self.position = position
+        self.image = pygame.image.load("images/call.png")
+        self.call_value = call_value
+        self.parent = client
+        self.kind = 'bet button'
+
+        image_size = self.image.get_rect().size
+        self.label = client.myfont.render(str(round(call_value)), True, (255,255,255))
+        l_size = self.label.get_rect().size
+
+        x, y = position
+        label_x = x + image_size[0]/2 - l_size[0]/2
+        label_y = y + image_size[1]/2
+        self.label_position = (label_x, label_y)
+        
+        
+    def draw(self):
+        mouse = pygame.mouse.get_pos()
+        click = pygame.mouse.get_pressed()
+        
+        x, y = self.position
+        w, h = self.image.get_rect().size
+
+        self.erase()
+        if x+w>mouse[0]>x and y+h>mouse[1]>y:
+            self.parent.display.blit(self.image, self.position)
+            if(click[0]==1):
+                self.parent.last_clicked_button = self
+        else:
+            blit_alpha(self.parent.display, self.image, self.position, 210)
+
+        self.parent.display.blit(self.label, self.label_position)
+                
+    def erase(self):
+        self.parent.display.blit(self.parent.bg, self.position, pygame.Rect(self.position, self.image.get_rect().size))
+
+    def mouse_click(self):
+        self.parent.sender.call(self.call_value)
     
 class Slider(Widget):
     def __init__(self):

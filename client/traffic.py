@@ -28,13 +28,16 @@ class Sender():
             self.client.draw_empty_seats(data)
 
     def check(self):
-        pass
+        print("check")
     
     def bet(self):
         pass
+
+    def call(self, call_value):
+        print("call "+ str(call_value))
     
     def fold(self):
-        pass
+        print("fold")
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
     """

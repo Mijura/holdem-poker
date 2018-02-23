@@ -80,13 +80,6 @@ class Client:
                 self.buttons[key] = value
                 self.thread_lock.release()
 
-                #add fold button in dict
-                key = self.buttons_coord['fold']
-                value = (pygame.image.load("images/fold.png"), key, self.sender.fold, (), 'fold')
-                self.thread_lock.acquire()
-                self.buttons[key] = value
-                self.thread_lock.release()
-
                 #slider
                 maxi = 0
                 for player in self.data: #search player who whas max chips
@@ -106,41 +99,51 @@ class Client:
         return callf
 
     # returns player's stake
-    def get_stake(self, player):
-        return player['stake']
+    def get_bet(self, player):
+        return player['bet']
 
     # returns True if all elements of list are equal, otherwise returns False
     def check_equal(self, lst):
         return lst[1:] == lst[:-1]
 
+    def determine_call_value(self, chips, bet):
+        max_bet = 0
+        for player in self.data: #search player who whas max chips
+            if(player['address']!=self.address):
+                if player['bet']>max_bet:
+                    max_bet = player['bet']
+
+        call_value = max_bet - bet 
+        if(call_value > chips): #if current player has less chips
+            return chips
+        
+        return call_value
+
     # adds check button in dictionary
-    def draw_call_button(func):
+    def set_check_button(func):
         def callf(self, news):
-            if('on move' in news and news['address']==self.address):
-                stakes = list(map(self.get_stake, self.data))
-                if self.check_equal(stakes):
-                    #add chceck button in dict
-                    key = self.buttons_coord['check']
-                    value = (pygame.image.load("images/check.png"), 
-                        key, self.sender.check, (), 'check')
+            if('on move' in news and news['on move']==True and news['address']==self.address):
+                bets = list(map(self.get_bet, self.data))
+                if self.check_equal(bets):
+                    #add chceck button in list
                     self.thread_lock.acquire()
-                    self.buttons[key] = value
+                    self.buttons.append(CheckButton(self.buttons_coord['check'], self))
                     self.thread_lock.release()
             return func(self, news)
         return callf
-    
-    # adds check button in dictionary
-    def draw_check_button(func):
+
+    # adds fold button in dictionary
+    def set_call_fold_buttons(func):
         def callf(self, news):
-            if('on move' in news and news['address']==self.address):
-                stakes = list(map(self.get_stake, self.data))
-                if self.check_equal(stakes):
-                    #add chceck button in dict
-                    key = self.buttons_coord['check']
-                    value = (pygame.image.load("images/check.png"), 
-                        key, self.sender.check, (), 'check')
+            if('on move' in news and news['on move']==True and news['address']==self.address):
+                bets = list(map(self.get_bet, self.data))
+                if not self.check_equal(bets):
+                    call_value = self.determine_call_value(news['chips'], news['bet'])
+                    seat = news['seat']
+                    #add chceck button in list
                     self.thread_lock.acquire()
-                    self.buttons[key] = value
+                    self.buttons.append(CallButton(self.buttons_coord['call'], call_value, self))
+                    self.buttons.append(FoldButton(self.buttons_coord['fold'], self))
                     self.thread_lock.release()
             return func(self, news)
         return callf
@@ -199,8 +202,8 @@ class Client:
         return callf
 
     #@draw_bet_buttons
-    #@draw_call_button
-    #@draw_check_button
+    @set_call_fold_buttons
+    @set_check_button
     @set_player
     @set_take_button
     @set_empty_seat
@@ -241,11 +244,16 @@ class Client:
             widget.draw()
         self.thread_lock.release()
         pygame.display.flip()
+    
+    def draw_bet_buttons(self):
+        for button in self.buttons:
+            button.draw()
 
     def game_loop(self):
         gameExit = False
         while not gameExit:
             self.update_table() #each time, draws all seats
+            self.draw_bet_buttons()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.server.shutdown()
@@ -265,12 +273,17 @@ class Client:
                     
                     self.last_clicked_button.erase()
 
-                    self.thread_lock.acquire()
-                    del self.table[self.last_clicked_button.seat_number]
-                    self.thread_lock.release()
+                    if(self.last_clicked_button.kind == 'seat button'):
+                        self.thread_lock.acquire()
+                        del self.table[self.last_clicked_button.seat_number]
+                        self.thread_lock.release()
+                    elif(self.last_clicked_button.kind == 'bet button'):
+                        for button in self.buttons:
+                            button.erase()
+                        self.buttons = []
 
                     self.last_clicked_button = None
-                    self.buttons = []
+                    
 
                 elif event.type == pygame.MOUSEBUTTONUP:
                     self.slider.hit = False
