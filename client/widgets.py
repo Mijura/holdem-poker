@@ -54,11 +54,13 @@ class TakeSeatButton(Button):
         w, h = self.image.get_rect().size
 
         self.erase()
+        
         if x+w>mouse[0]>x and y+h>mouse[1]>y:
             self.parent.display.blit(self.image, self.position)
             if(click[0]==1):
                 self.parent.last_clicked_button = self
         else:
+
             blit_alpha(self.parent.display, self.image, self.position, 210)
                 
     def erase(self):
@@ -69,9 +71,10 @@ class TakeSeatButton(Button):
 
 class CheckButton(Button):
 
-    def __init__(self, position, client):
+    def __init__(self, position, seat_number, client):
         self.position = position
         self.image = pygame.image.load("images/check.png")
+        self.seat_number = seat_number
         self.parent = client
         self.kind = 'bet button'
 
@@ -127,10 +130,11 @@ class FoldButton(Button):
 
 class CallButton(Button):
 
-    def __init__(self, position, call_value, client):
+    def __init__(self, position, call_value, seat_number, client):
         self.position = position
         self.image = pygame.image.load("images/call.png")
         self.call_value = call_value
+        self.seat_number = seat_number
         self.parent = client
         self.kind = 'bet button'
 
@@ -165,10 +169,101 @@ class CallButton(Button):
         self.parent.display.blit(self.parent.bg, self.position, pygame.Rect(self.position, self.image.get_rect().size))
 
     def mouse_click(self):
-        self.parent.sender.call(self.call_value)
+        self.parent.table[int(self.seat_number)].call(self.call_value)
+        self.parent.sender.call(self.call_value, self.seat_number)
+
+class RaiseButton(Button):
+
+    def __init__(self, position, slider, client):
+        self.position = position
+        self.image = pygame.image.load("images/raise.png")
+        self.slider = slider
+        self.parent = client
+        self.kind = 'bet button'
+
+        self.image_size = self.image.get_rect().size
+        
+    def draw(self):
+        mouse = pygame.mouse.get_pos()
+        click = pygame.mouse.get_pressed()
+        
+        x, y = self.position
+        w, h = self.image.get_rect().size
+
+        self.erase()
+        if x+w>mouse[0]>x and y+h>mouse[1]>y:
+            self.parent.display.blit(self.image, self.position)
+            if(click[0]==1):
+                self.parent.last_clicked_button = self
+        else:
+            blit_alpha(self.parent.display, self.image, self.position, 210)
+
+        
+        label = self.parent.myfont.render(str(round(self.slider.val)), True, (255,255,255))
+        l_size = label.get_rect().size
+
+        x, y = self.position
+        label_x = x + self.image_size[0]/2 - l_size[0]/2
+        label_y = y + self.image_size[1]/2
+        label_position = (label_x, label_y)
+
+        self.parent.display.blit(label, label_position)
+                
+    def erase(self):
+        self.parent.display.blit(self.parent.bg, self.position, pygame.Rect(self.position, self.image.get_rect().size))
+
+    def mouse_click(self):
+        self.parent.sender.raise_to(self.slider.val)
+
+class BetButton(Button):
+
+    def __init__(self, position, slider, client):
+        self.position = position
+        self.image = pygame.image.load("images/bet.png")
+        self.slider = slider
+        self.parent = client
+        self.kind = 'bet button'
+
+        self.image_size = self.image.get_rect().size
+        
+    def draw(self):
+        mouse = pygame.mouse.get_pos()
+        click = pygame.mouse.get_pressed()
+        
+        x, y = self.position
+        w, h = self.image.get_rect().size
+
+        self.erase()
+        if x+w>mouse[0]>x and y+h>mouse[1]>y:
+            self.parent.display.blit(self.image, self.position)
+            if(click[0]==1):
+                self.parent.last_clicked_button = self
+        else:
+            blit_alpha(self.parent.display, self.image, self.position, 210)
+
+        
+        label = self.parent.myfont.render(str(round(self.slider.val)), True, (255,255,255))
+        l_size = label.get_rect().size
+
+        x, y = self.position
+        label_x = x + self.image_size[0]/2 - l_size[0]/2
+        label_y = y + self.image_size[1]/2
+        label_position = (label_x, label_y)
+
+        self.parent.display.blit(label, label_position)
+                
+    def erase(self):
+        self.parent.display.blit(self.parent.bg, self.position, pygame.Rect(self.position, self.image.get_rect().size))
+
+    def mouse_click(self):
+        self.parent.sender.bet_to(self.slider.val)
     
 class Slider(Widget):
-    def __init__(self):
+    
+    def __init__(self, client):
+        
+        self.parent = client
+        
         self.WHITE = (255, 255, 255)
         self.TRANS = (1, 1, 1)
 
@@ -177,29 +272,37 @@ class Slider(Widget):
         self.mini = 0  # minimum at slider position left
         self.xpos = 540  # x-location on screen
         self.ypos = 495 # y-location on screen
+        self.position = (self.xpos, self.ypos)
 
         self.hit = False  # the hit attribute indicates slider movement due to mouse interaction
 
+        self.surf_size = (120, 25)
         # button surface #
         self.button_surf = pygame.surface.Surface((20, 20))
         self.button_surf.fill(self.TRANS)
         self.button_surf.set_colorkey(self.TRANS)
         self.button_surf.blit(pygame.image.load("images/slider_button.png"),(0,0))
 
-    def draw(self, screen):
-        screen.blit(pygame.image.load("images/table.png"), (self.xpos, self.ypos), pygame.Rect((self.xpos, self.ypos),(120, 25)))
-        surf = pygame.surface.Surface((120, 25), pygame.SRCALPHA, 32)
-        surf.blit(pygame.image.load("images/slider_scale.png"),(0,8))
 
-        pos = (10+int((self.val-self.mini)/(self.maxi-self.mini)*100), 13)
+    def set_slider_params(self, params):
+        self.maxi = params[1]
+        self.mini = params[0]
+        self.val = params[0]
+
+    def draw(self):
+        self.erase()
+        self.surf = pygame.surface.Surface(self.surf_size, pygame.SRCALPHA, 32)
+        self.surf.blit(pygame.image.load("images/slider_scale.png"), (0,8))
+
+        pos = (10 + int ((self.val - self.mini) / (self.maxi - self.mini) * 100), 13)
         self.button_rect = self.button_surf.get_rect(center=pos)
-        surf.blit(self.button_surf, self.button_rect)
+        self.surf.blit(self.button_surf, self.button_rect)
         self.button_rect.move_ip(self.xpos, self.ypos)  # move of button box to correct screen position
 
-        screen.blit(surf, (self.xpos, self.ypos))
+        self.parent.display.blit(self.surf, (self.xpos, self.ypos))
     
     def erase(self):
-        pass
+        self.parent.display.blit(self.parent.bg, self.position, pygame.Rect(self.position, self.surf_size))
     
     def move(self):
         """
@@ -213,7 +316,7 @@ class Slider(Widget):
 
 class Player(Widget):
 
-    def __init__(self, position, seat_number, name, chips, on_move, bet, cards, address, client):
+    def __init__(self, position, seat_number, name, chips, on_move, bet, cards, address, in_game, client):
         self.position = position
         self.seat_number = seat_number
         self.name = name
@@ -221,40 +324,49 @@ class Player(Widget):
         self.on_move = on_move
         self.parent = client
         self.address = address
-        
-        self.cards = []
-        x, y = client.cards_coord[seat_number]
-        for card in cards:
-            self.cards.append(PlayerCard((x, y), card, address, client))
-            x += 60
+        self.kind = 'player widget'
+        self.in_game = in_game
 
+        self.blink = 0        
+        self.set_cards(cards)
+        self.calculate_side()
+        self.set_name_label()
+        self.set_chips_label()
+        self.image = pygame.image.load("images/purple_"+self.side+".png")
+        self.bet = Chips(client.chips_coord[seat_number], bet, seat_number, client)
+
+    def set_chips_label(self):
         x, y = self.position
-
-        self.name_label = self.parent.myfont.render(self.name, True, pygame.Color('white'))
-        l_size = self.name_label.get_rect().size
         self.chips_label = self.parent.myfont.render(str(self.chips)+' $', True, pygame.Color('white'))
         c_size = self.chips_label.get_rect().size
-
         if(self.seat_number >= 4):
-            side = 'left'
-            self.l_x = x + 100 - l_size[0]/2
-            self.c_x = x + 100 - c_size[0]/2
+            self.c_x = x + 100 - c_size[0] / 2
         else:
-            side = 'right'
-            self.l_x = x + 50 - l_size[0]/2
-            self.c_x = x + 50 - c_size[0]/2
-
-        if(self.on_move):
-            color = "green"
-        else:
-            color = "purple"
-
-        self.l_y = y + 15
+            self.c_x = x + 50 - c_size[0] / 2
         self.c_y = y + 37
 
-        self.image = pygame.image.load("images/"+color+"_"+side+".png")
+    def set_name_label(self):
+        x, y = self.position
+        self.name_label = self.parent.myfont.render(self.name, True, pygame.Color('white'))
+        l_size = self.name_label.get_rect().size
+        if(self.seat_number >= 4):
+            self.l_x = x + 100 - l_size[0] / 2
+        else:
+            self.l_x = x + 50 - l_size[0] / 2
+        self.l_y = y + 15
 
-        self.bet = Chips(client.chips_coord[seat_number], bet, seat_number, client)
+    def calculate_side(self):
+        if(self.seat_number >= 4):
+            self.side = 'left'
+        else:
+            self.side = 'right'
+
+    def set_cards(self, cards):
+        self.cards = []
+        x, y = self.parent.cards_coord[self.seat_number]
+        for card in cards:
+            self.cards.append(PlayerCard((x, y), card, self.address, self.parent))
+            x += 60
 
     def draw(self):
 
@@ -263,9 +375,29 @@ class Player(Widget):
         for card in self.cards:
             card.draw()
 
-        self.parent.display.blit(self.image, self.position)
-        self.parent.display.blit(self.name_label, (self.l_x, self.l_y))
-        self.parent.display.blit(self.chips_label, (self.c_x, self.c_y))
+        if self.on_move:
+            if self.blink % 2:
+                self.image = pygame.image.load("images/green_"+self.side+".png")
+                if self.blink == 251:
+                    self.blink = 0
+            else:
+                self.image = pygame.image.load("images/white_"+self.side+".png")
+                if self.blink == 250:
+                    self.blink = 1
+            self.blink += 2
+        else:
+            self.image = pygame.image.load("images/purple_"+self.side+".png")
+        
+        if self.in_game:
+            self.parent.display.blit(self.image, self.position)
+            self.parent.display.blit(self.name_label, (self.l_x, self.l_y))
+            self.parent.display.blit(self.chips_label, (self.c_x, self.c_y))
+        else:
+            blit_alpha(self.parent.display, self.image, self.position, 128)
+            blit_alpha(self.parent.display, self.name_label, (self.l_x, self.l_y), 128)
+            blit_alpha(self.parent.display, self.chips_label, (self.c_x, self.c_y), 128)
+
+        
         
         self.bet.draw()
     
@@ -276,6 +408,13 @@ class Player(Widget):
         self.bet.erase()
         self.parent.display.blit(self.parent.bg, self.position, pygame.Rect(self.position, self.image.get_rect().size))
 
+    def call(self, call_value):
+        self.chips -= call_value
+        self.set_chips_label()
+        self.bet.total += call_value
+        self.bet.set_new_chips(self.bet.total)
+        self.on_move = False
+
 class EmptySeat(Widget):
 
     def __init__(self, position, seat_number, client):
@@ -283,6 +422,7 @@ class EmptySeat(Widget):
         self.seat_number = seat_number
         self.image = pygame.image.load("images/empty.png")
         self.parent = client
+        self.kind = 'seat widget'
 
     def draw(self):
         self.erase()
@@ -297,24 +437,9 @@ class Chips(Widget):
         self.position = position
         self.parent = client
         self.total = total
+        self.seat_number = seat_number
         
-        self.chips_histogram = self.create_chips_histogram(total)
-        columns = self.group_chips()
-        
-        self.chips = []
-
-        x, y = self.position
-        start_y = y
-        for column in columns:
-            for chips in column:
-                for i in range(0,chips[1]):
-                    self.chips.append(Chip(chips[0], (x, y), client))
-                    y -= 5
-            y = start_y
-            if(int(seat_number)>=4):
-                x -= 22
-            else:
-                x += 22
+        self.set_new_chips(total)
         
     def create_chips_histogram(self, total):
         chips = takewhile(lambda x: x<=total, self.parent.chips)
@@ -341,6 +466,27 @@ class Chips(Widget):
             chips[i].append(item)
             i+=1
         return chips
+
+    def add_chips(self):
+        self.chips = []
+
+        x, y = self.position
+        start_y = y
+        for column in self.columns:
+            for chips in column:
+                for i in range(0,chips[1]):
+                    self.chips.append(Chip(chips[0], (x, y), self.parent))
+                    y -= 5
+            y = start_y
+            if(int(self.seat_number)>=4):
+                x -= 22
+            else:
+                x += 22
+
+    def set_new_chips(self, total):
+        self.chips_histogram = self.create_chips_histogram(total)
+        self.columns = self.group_chips()
+        self.add_chips()
 
     def draw(self):
         for chip in self.chips:

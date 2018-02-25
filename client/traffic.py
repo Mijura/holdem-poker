@@ -29,12 +29,18 @@ class Sender():
 
     def check(self):
         print("check")
-    
-    def bet(self):
-        pass
 
-    def call(self, call_value):
-        print("call "+ str(call_value))
+    def call(self, call_value, seat):
+        r = requests.post(self.remote_server + "/call", 
+                            data={'call': int(call_value), 'seat': int(seat)})
+        data = json.loads(r.text)
+        self.client.init_table(data)
+
+    def raise_to(self, raise_value):
+        print("raise to "+ str(raise_value))
+
+    def bet_to(self, bet_value):
+        print("bet to "+ str(bet_value))
     
     def fold(self):
         print("fold")
@@ -57,17 +63,21 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         # self.request is the TCP socket connected to the client
-        self.data = self.request.recv(1024).strip()
+        self.data = self.request.recv(2096).strip()
         print("{} wrote:".format(self.client_address[0]))
         print(self.data)
         
-        data = self.data.decode('UTF-8').split('\r\n\r\n')[1] #split request with new line (header is at position 0, data is at position 1)
+        try:
+            data = self.data.decode('UTF-8').split('\r\n\r\n')[1] #split request with new line (header is at position 0, data is at position 1)
+        except IndexError:
+            data = self.request.recv(2096).strip()
+            print(self.data)
+
         data = json.loads(data)
         self.client.data = data
 
         for x in data:
             self.client.refresh_table(x)
 
-        # just send back the same data, but upper-cased
         response = b'HTTP/1.1 200 OK\n\n'
         self.request.sendall(response)

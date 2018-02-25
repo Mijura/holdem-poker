@@ -28,7 +28,7 @@ class Client:
         pygame.display.set_caption("Texas Hold`em Poker")
         self.bg = pygame.image.load("images/table.png")
         self.display.blit(self.bg, (0, 0))
-        self.slider = Slider()
+        self.slider = Slider(self)
         self.show_slider = False
 
         pygame.display.flip()
@@ -59,45 +59,7 @@ class Client:
         self.listen_thread.start()
 
         self.game_loop()
-
-    # creates button and save button args if user click on button (left click)
-    def create_button(self, image, coord, action, action_args, type):
-        if type=='raise' or type=='bet':
-            myfont = pygame.font.Font("myriad_pro.ttf", 15)
-            label = myfont.render(str(round(self.slider.val)), True, (255,255,255))
-            l_size = label.get_rect().size
-            self.display.blit(label, ((540 + 60 - l_size[0]/2), 547))
-
-    # adds bet buttons in dictionary
-    def draw_bet_buttons(func):
-        def callf(self, news):
-            if('on move' in news and news['address']==self.address):
-                
-                #add bet button in dict
-                key = self.buttons_coord['bet']
-                value = (pygame.image.load("images/bet.png"), key, self.sender.bet, (), 'bet')
-                self.thread_lock.acquire()
-                self.buttons[key] = value
-                self.thread_lock.release()
-
-                #slider
-                maxi = 0
-                for player in self.data: #search player who whas max chips
-                    if(player['address']!=self.address):
-                        if player['chips']>maxi:
-                            maxi = player['chips']
-
-                if(maxi>news['chips']): #if current player has less chips
-                    maxi = news['chips']
-
-                self.slider.maxi = maxi
-                self.slider.mini = 0
-                self.slider.val = 0
-                self.show_slider = True
-
-            return func(self, news)
-        return callf
-
+    
     # returns player's stake
     def get_bet(self, player):
         return player['bet']
@@ -106,44 +68,103 @@ class Client:
     def check_equal(self, lst):
         return lst[1:] == lst[:-1]
 
-    def determine_call_value(self, chips, bet):
+    def find_max_chips(self):
+        max_chips = 0
+        for player in self.data: #search player who whas max chips
+            if(player['address'] != self.address):
+                if player['chips'] > max_chips:
+                    max_chips = player['chips'] + player['bet']
+        return max_chips
+
+    def find_max_bet(self):
         max_bet = 0
         for player in self.data: #search player who whas max chips
-            if(player['address']!=self.address):
-                if player['bet']>max_bet:
+            if(player['address'] != self.address):
+                if player['bet'] > max_bet:
                     max_bet = player['bet']
+        return max_bet
 
+    def determine_call_value(self, chips, max_bet, bet):
         call_value = max_bet - bet 
         if(call_value > chips): #if current player has less chips
             return chips
-        
         return call_value
+    """
+    def bet_slider_params(self, chips, bet):
+        max_chips = self.find_max_chips()
+        if(max_chips > chips): #if current player has less chips
+            max_chips = chips 
+        return (1, max_chips + bet)"""
+    # adds bet button to list
+    def set_bet_button(func):
+        def callf(self, news):
+            if('on move' in news and news['on move']==True and news['address']==self.address):
+                bets = list(map(self.get_bet, self.data))
+                if self.check_equal(bets):
+                    if news['chips'] > 1:
+                        self.slider.set_slider_params((news['bet'] + 1, news['chips'] + news['bet']))
+                        self.show_slider = True
+                        self.thread_lock.acquire()
+                        self.buttons.append(BetButton(self.buttons_coord['bet'], self.slider, self))
+                        self.thread_lock.release()
+            return func(self, news)
+        return callf
 
-    # adds check button in dictionary
+
+    # adds raise button to list and show slider
+    def set_raise_button(func):
+        def callf(self, news):
+            if('on move' in news and news['on move']==True and news['address']==self.address):
+                bets = list(map(self.get_bet, self.data))
+                if not self.check_equal(bets):
+                    max_bet = self.find_max_bet()
+                    down_border = max_bet + 1
+                    up_border = self.find_max_chips()
+                    bet_difference = max_bet - news['bet']
+                    if news['chips'] > bet_difference and up_border >= down_border:
+                        self.slider.set_slider_params((down_border, up_border))
+                        if up_border > down_border:
+                            self.show_slider = True
+                        self.thread_lock.acquire()
+                        self.buttons.append(RaiseButton(self.buttons_coord['raise'], self.slider, self))
+                        self.thread_lock.release()
+            return func(self, news)
+        return callf
+
+    # adds call button to list
+    def set_call_button(func):
+        def callf(self, news):
+            if('on move' in news and news['on move']==True and news['address']==self.address):
+                bets = list(map(self.get_bet, self.data))
+                if not self.check_equal(bets):
+                    max_bet = self.find_max_bet()
+                    call_value = self.determine_call_value(news['chips'], max_bet, news['bet'])
+                    self.thread_lock.acquire()
+                    self.buttons.append(CallButton(self.buttons_coord['call'], call_value, news['seat'], self))
+                    self.thread_lock.release()
+            return func(self, news)
+        return callf
+
+    # adds fold button to list
+    def set_fold_button(func):
+        def callf(self, news):
+            if('on move' in news and news['on move']==True and news['address']==self.address):
+                bets = list(map(self.get_bet, self.data))
+                if not self.check_equal(bets):
+                    self.thread_lock.acquire()
+                    self.buttons.append(FoldButton(self.buttons_coord['fold'], self))
+                    self.thread_lock.release()
+            return func(self, news)
+        return callf
+
+    # adds check button to list
     def set_check_button(func):
         def callf(self, news):
             if('on move' in news and news['on move']==True and news['address']==self.address):
                 bets = list(map(self.get_bet, self.data))
                 if self.check_equal(bets):
-                    #add chceck button in list
                     self.thread_lock.acquire()
-                    self.buttons.append(CheckButton(self.buttons_coord['check'], self))
-                    self.thread_lock.release()
-            return func(self, news)
-        return callf
-
-    # adds fold button in dictionary
-    def set_call_fold_buttons(func):
-        def callf(self, news):
-            if('on move' in news and news['on move']==True and news['address']==self.address):
-                bets = list(map(self.get_bet, self.data))
-                if not self.check_equal(bets):
-                    call_value = self.determine_call_value(news['chips'], news['bet'])
-                    seat = news['seat']
-                    #add chceck button in list
-                    self.thread_lock.acquire()
-                    self.buttons.append(CallButton(self.buttons_coord['call'], call_value, self))
-                    self.buttons.append(FoldButton(self.buttons_coord['fold'], self))
+                    self.buttons.append(CheckButton(self.buttons_coord['check'], news['seat'], self))
                     self.thread_lock.release()
             return func(self, news)
         return callf
@@ -172,7 +193,7 @@ class Client:
                 if seat in self.table:
                     self.table[seat].erase()
                 self.table[seat] = Player(self.player_coord[seat], seat, news['name'], news['chips'], 
-                        news['on move'], news['bet'], news['cards'], news['address'], self)
+                        news['on move'], news['bet'], news['cards'], news['address'], news['in game'], self)
                 self.thread_lock.release()
             return func(self, news)
         return callf
@@ -201,8 +222,10 @@ class Client:
             return func(self, news)
         return callf
 
-    #@draw_bet_buttons
-    @set_call_fold_buttons
+    @set_bet_button
+    @set_raise_button
+    @set_call_button
+    @set_fold_button
     @set_check_button
     @set_player
     @set_take_button
@@ -236,6 +259,18 @@ class Client:
             # Activate the server; this will keep running until you
             # interrupt the program with Ctrl-C
             self.server.serve_forever()
+
+    def is_button_clicked(self):
+        pos = pygame.mouse.get_pos()
+        for button in self.buttons:
+            r = pygame.Rect(button.position, button.image.get_rect().size)
+            if button.kind == 'bet button' and r.collidepoint(pos):
+                return True
+        for widget in self.table.values():
+            r = pygame.Rect(widget.position, widget.image.get_rect().size)
+            if widget.kind == 'seat button' and r.collidepoint(pos):
+                return True
+        return False
     
     #Update the display
     def update_table(self):
@@ -265,8 +300,10 @@ class Client:
                     if self.show_slider and self.slider.button_rect.collidepoint(pos):
                         self.slider.hit = True
                     
+                    self.button_clicked = self.is_button_clicked()
+                    
                 # if the user click on some button
-                elif event.type == pygame.MOUSEBUTTONUP and self.last_clicked_button:
+                elif event.type == pygame.MOUSEBUTTONUP and self.button_clicked:
 
                     t = Thread(target = self.last_clicked_button.mouse_click, args = {})
                     t.start()
@@ -281,6 +318,8 @@ class Client:
                         for button in self.buttons:
                             button.erase()
                         self.buttons = []
+                        self.slider.erase()
+                        self.show_slider = False
 
                     self.last_clicked_button = None
                     
@@ -292,7 +331,7 @@ class Client:
                 self.slider.move()
 
             if self.show_slider:
-                self.slider.draw(self.display)
+                self.slider.draw()
                 
             pygame.display.flip()
 
