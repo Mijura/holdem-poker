@@ -17,5 +17,6 @@ core
 																				
 		POST: '/takeSeat' -> [ :req | kernel takeSeat: (req at: #seat) address: (req at: #address)];
 		
-   		
+		POST: '/call' -> [ :req | kernel call: (req at: #call) seat: (req at: #seat)];
+
    		start.

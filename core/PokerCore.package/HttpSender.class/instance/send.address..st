@@ -1,5 +1,5 @@
 operations
-sendPreFlop: players address: address
+send: players address: address
 	"send post request to user"
 	ZnClient new
    		url: 'http://', address;

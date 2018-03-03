@@ -13,5 +13,5 @@ doState: kernel
 			newState doState: kernel]
 		ifFalse:[
 			"send news to all users"
-			kernel sender sendPreFlopNews: kernel].
+			kernel sender sendNews: kernel].
 		
