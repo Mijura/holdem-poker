@@ -1,3 +1,3 @@
 # Core Server
 
-![alt text](https://s13.postimg.org/k8pkip59z/State_Diagram.png)
+![alt text](http://res.cloudinary.com/webp/image/upload/v1523882291/core_vehivw.png)
