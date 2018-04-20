@@ -4,7 +4,7 @@ This is the implementation one of the most popular poker game [Texas Hold 'em](h
 
 Application allows users to play this version of poker via net. Game is written in four various programming languages Python, Clojure, Haskell and Pharo.
 
-![alt text](http://res.cloudinary.com/webp/image/upload/v1523882291/image_uucyds.png)
+![alt text](http://res.cloudinary.com/webp/image/upload/v1524244628/image_ryues5.png)
 
 ## Application parts
 
