@@ -1,8 +1,6 @@
 # TexasHoldemPoker
 
-This is the implementation one of the most popular poker game [Texas Hold 'em](https://en.wikipedia.org/wiki/Texas_hold_%27em).
-
-Application allows users to play this version of poker via net. Game is written in four various programming languages Python, Clojure, Haskell and Pharo.
+[Texas Hold 'em](https://en.wikipedia.org/wiki/Texas_hold_%27em) — The most popular version of poker, now playable online. This application allows users to enjoy the game remotely and is developed using four programming languages: Python, Clojure, Haskell, and Pharo.
 
 ![alt text](http://res.cloudinary.com/webp/image/upload/v1524244628/image_ryues5.png)
 
